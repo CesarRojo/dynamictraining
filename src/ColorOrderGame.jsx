@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useReducer } from 'react';
 import axios from 'axios';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useLocation } from 'react-router-dom';
 
 const ItemTypes = {
   VALUE: 'value', // Define the drag item type for react-dnd
@@ -168,6 +169,8 @@ const ColorOrderGame = () => {
   const [dataEntries, setDataEntries] = useState([]);
   const [colors, setColors] = useState([]);
   const [sections, setSections] = useState([]);
+  const location = useLocation();
+  const plantName = location.state?.plantName || 'Unknown';
 
   // Use reducer to manage available and table values grouped by section
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -180,7 +183,7 @@ const ColorOrderGame = () => {
         const [dataRes, colorsRes, sectionsRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_API}/data`),
           axios.get(`${import.meta.env.VITE_API}/colors`),
-          axios.get(`${import.meta.env.VITE_API}/sections`),
+          axios.get(`${import.meta.env.VITE_API}/sections/plant`, { params: { plant: plantName } }), // Fetch sections for the selected plant
         ]);
         setDataEntries(dataRes.data);
         setColors(colorsRes.data);
@@ -261,10 +264,56 @@ const ColorOrderGame = () => {
     return acc;
   }, {});
 
+  // State for tracking completed sections
+  const [completedSections, setCompletedSections] = useState({});
+  const [allCompleted, setAllCompleted] = useState(false);
+
+  // Function to check if a section is complete (all cells filled correctly)
+  const isSectionComplete = (sectionId) => {
+    const originalItems = groupedDataBySection[sectionId] || [];
+    const tableValues = tableValuesBySection[sectionId] || [];
+
+    if (tableValues.length === 0) return false;
+
+    // Verify each cell
+    for (let i = 0; i < originalItems.length; i++) {
+      const val = tableValues[i];
+      if (!val) return false; // Cell is empty
+      const correctColorId = originalItems[i].colorId;
+      const valColorId = dataEntries.find((d) => d.id === val.id)?.colorId;
+      if (valColorId !== correctColorId) return false; // Incorrect value
+    }
+    return true;
+  };
+
+  // useEffect to update completed sections whenever table values change
+  useEffect(() => {
+    if (sections.length === 0) return;
+
+    const newCompletedSections = {};
+    let allDone = true;
+
+    sections.forEach(({ id: sectionId }) => {
+      const complete = isSectionComplete(sectionId);
+      newCompletedSections[sectionId] = complete;
+      if (!complete) allDone = false;
+    });
+
+    setCompletedSections(newCompletedSections);
+    setAllCompleted(allDone);
+  }, [tableValuesBySection, sections, dataEntries]);
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="p-5">
         <h2 className="text-2xl font-semibold mb-6">Arrange the values to match the correct color</h2>
+
+        {/* Global message if all sections are complete */}
+        {allCompleted && (
+          <div className="mb-6 p-4 bg-green-200 text-green-800 rounded font-semibold">
+            You have successfully completed all sections! 🎉
+          </div>
+        )}
 
         {/* Render UI for each section */}
         {sections.map(({ id: sectionId, name }) => {
@@ -282,57 +331,106 @@ const ColorOrderGame = () => {
             );
           }
 
+          // Divide items into two halves for two tables
+          const midIndex = Math.ceil(originalItems.length / 2);
+          const firstHalf = originalItems.slice(0, midIndex);
+          const secondHalf = originalItems.slice(midIndex);
+
           return (
             <div
               key={sectionId}
               className="mb-10 flex flex-col md:flex-row md:items-start md:gap-6"
             >
-              {/* Available values list */}
-              <p>{name}</p>
-              <div className="md:w-48 mb-4 md:mb-0 border border-gray-300 rounded bg-gray-50 p-3 max-h-64 overflow-auto">
-                <strong className="block mb-2">Available values:</strong>
-                {availableValues.length === 0 ? (
-                  <p className="italic text-gray-500">No available values</p>
-                ) : (
-                  availableValues.map((val) => (
-                    <DraggableValue key={val.id} val={val} sectionId={sectionId} />
-                  ))
+              {/* Name and completed state */}
+              <div className="mb-4 md:mb-0 md:w-48">
+                <p className="text-lg font-semibold">{name}</p>
+                {completedSections[sectionId] && (
+                  <span className="text-green-600 font-bold">✔ Completed</span>
                 )}
+
+                {/* Available values list */}
+                <div className="mt-3 border border-gray-300 rounded bg-gray-50 p-3 max-h-64 overflow-auto">
+                  <strong className="block mb-2">Available values:</strong>
+                  {availableValues.length === 0 ? (
+                    <p className="italic text-gray-500">No available values</p>
+                  ) : (
+                    availableValues.map((val) => (
+                      <DraggableValue key={val.id} val={val} sectionId={sectionId} />
+                    ))
+                  )}
+                </div>
               </div>
 
-              {/* Table showing colors and droppable cells */}
-              <div className="flex-1 overflow-x-auto">
-                <table className="w-full border border-gray-300 rounded text-center table-fixed">
+              {/* Container for the tables */}
+              <div className="flex-1 flex flex-col md:flex-row md:gap-6 overflow-x-auto">
+                {/* First table */}
+                <table className="w-full md:w-1/2 border border-gray-300 rounded text-center table-fixed mb-6 md:mb-0">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="border-b border-gray-300 py-2">Color</th>
-                      <th className="border-b border-gray-300 py-2">Value</th>
+                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '10%' }}>Color</th>
+                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '90%' }}>Value</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {originalItems.map((item, index) => {
+                    {firstHalf.map((item, index) => {
                       const val = tableValues[index] || null;
 
-                      // Determine if the value in the cell matches the correct color
                       const correctColorId = item.colorId;
                       const valColorId = val ? dataEntries.find((d) => d.id === val.id)?.colorId : null;
                       const isCorrect = valColorId === correctColorId;
 
                       return (
                         <tr key={item.id} className="hover:bg-gray-50">
-                          {/* Color circle */}
                           <td className="align-middle py-2">
                             <div
-                              className="w-8 h-8 rounded-full border border-gray-300 mx-auto"
+                              className="w-6 h-6 rounded-full border border-gray-300 mx-auto"
                               style={{ backgroundColor: item.color?.color || '#ccc' }}
                               title={item.color?.display || 'No color'}
                             />
                           </td>
-
-                          {/* Droppable and draggable value cell */}
                           <DroppableValueCell
                             val={val}
                             index={index}
+                            sectionId={sectionId}
+                            moveValueInTable={moveValueInTable}
+                            assignValueToCell={assignValueToCell}
+                            originalColor={item.color?.color}
+                            isCorrect={isCorrect}
+                          />
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {/* Second table */}
+                <table className="w-full md:w-1/2 border border-gray-300 rounded text-center table-fixed">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '10%' }}>Color</th>
+                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '90%' }}>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {secondHalf.map((item, index) => {
+                      const val = tableValues[midIndex + index] || null;
+
+                      const correctColorId = item.colorId;
+                      const valColorId = val ? dataEntries.find((d) => d.id === val.id)?.colorId : null;
+                      const isCorrect = valColorId === correctColorId;
+
+                      return (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="align-middle py-2">
+                            <div
+                              className="w-6 h-6 rounded-full border border-gray-300 mx-auto"
+                              style={{ backgroundColor: item.color?.color || '#ccc' }}
+                              title={item.color?.display || 'No color'}
+                            />
+                          </td>
+                          <DroppableValueCell
+                            val={val}
+                            index={midIndex + index}
                             sectionId={sectionId}
                             moveValueInTable={moveValueInTable}
                             assignValueToCell={assignValueToCell}

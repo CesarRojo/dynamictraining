@@ -21,107 +21,84 @@ const customStyles = {
 
 Modal.setAppElement('#root');
 
-const PlantsTable = () => {
-  const [plants, setPlants] = useState([]);
-  const [sections, setSections] = useState([]);
-  const [modalIsOpen, setModalIsOpen] = useState(false);
+const InsulatorsTable = () => {
+  const [insulators, setInsulators] = useState([]);
+  const [createModalIsOpen, setCreateModalIsOpen] = useState(false);
   const [editModalIsOpen, setEditModalIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    code: '',
-    sectionId: '',
-    status: true, // default active
   });
   const [editFormData, setEditFormData] = useState({
     id: null,
     name: '',
-    code: '',
     status: false,
   });
-  const [error, setError] = useState('');
 
-  // Fetch plants
-  const fetchPlants = async () => {
+  // Fetch insulators from backend
+  const fetchInsulators = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API}/plants`);
-      setPlants(res.data);
+      const res = await axios.get(`${import.meta.env.VITE_API}/insulators`);
+      setInsulators(res.data);
     } catch (err) {
-      console.error('Error fetching plants:', err);
-    }
-  };
-
-  // Fetch sections
-  const fetchSections = async () => {
-    try {
-      const res = await axios.get(`${import.meta.env.VITE_API}/sections`);
-      setSections(res.data);
-    } catch (err) {
-      console.error('Error fetching sections:', err);
+      console.error('Error fetching insulators:', err);
     }
   };
 
   useEffect(() => {
-    fetchPlants();
-    fetchSections();
+    fetchInsulators();
   }, []);
 
-  // Open/close create modal
-  const openModal = () => {
-    setFormData({ name: '', code: '', sectionId: '', status: true });
-    setModalIsOpen(true);
+  // Open and close create modal
+  const openCreateModal = () => {
+    setFormData({ name: '' });
+    setCreateModalIsOpen(true);
   };
-  const closeModal = () => setModalIsOpen(false);
+  const closeCreateModal = () => setCreateModalIsOpen(false);
 
-  // Open/close edit modal
-  const openEditModal = (plant) => {
+  // Open and close edit modal
+  const openEditModal = (insulator) => {
     setEditFormData({
-      id: plant.id,
-      name: plant.name,
-      code: plant.code,
-      status: plant.status || false,
+      id: insulator.id,
+      name: insulator.name,
+      status: insulator.status || false,
     });
     setEditModalIsOpen(true);
   };
   const closeEditModal = () => setEditModalIsOpen(false);
 
-  // Handle create form changes
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+  // Handle changes in create form inputs
+  const handleCreateChange = (e) => {
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [e.target.name]: e.target.value,
     }));
   };
 
-  // Handle edit form changes
+  // Handle changes in edit form inputs
   const handleEditChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setEditFormData(prev => ({
+    setEditFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
   // Submit create form
-  const handleSubmit = async (e) => {
+  const handleCreateSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.code.trim()) {
-      toast.error('Name and code are required.');
+    if (!formData.name.trim()) {
+      toast.error('Name is required.');
       return;
     }
 
     try {
-      await axios.post(`${import.meta.env.VITE_API}/plants`, {
-        name: formData.name.trim(),
-        code: formData.code.trim(),
-        status: formData.status,
-      });
-      closeModal();
-      fetchPlants();
+      await axios.post(`${import.meta.env.VITE_API}/insulators`, formData);
+      closeCreateModal();
+      fetchInsulators();
     } catch (err) {
-      console.error('Error creating plant:', err);
-      toast.error(`Failed to create plant. ${err?.response?.data?.message || ''}`);
+      console.error('Error creating insulator:', err);
+      toast.error(`Failed to create insulator. ${err?.response?.data?.message || ''}`);
     }
   };
 
@@ -129,62 +106,61 @@ const PlantsTable = () => {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
 
-    if (!editFormData.name.trim() || !editFormData.code.trim()) {
-      toast.error('Name and code are required.');
+    if (!editFormData.name.trim()) {
+      toast.error('Name is required.');
       return;
     }
 
     try {
-      await axios.put(`${import.meta.env.VITE_API}/plants/${editFormData.id}`, {
-        name: editFormData.name.trim(),
-        code: editFormData.code.trim(),
+      await axios.put(`${import.meta.env.VITE_API}/insulators/${editFormData.id}`, {
+        name: editFormData.name,
         status: editFormData.status,
       });
       closeEditModal();
-      fetchPlants();
+      fetchInsulators();
     } catch (err) {
-      console.error('Error updating plant:', err);
-      toast.error(`Failed to update plant. ${err?.response?.data?.message || ''}`);
+      console.error('Error updating insulator:', err);
+      toast.error(`Failed to update insulator. ${err?.response?.data?.message || ''}`);
     }
   };
 
   // Use hook for filter
-  const { filteredData: filteredPlants, FilterControls } = useStatusFilter(plants);
+  const { filteredData: filteredInsulators, FilterControls } = useStatusFilter(insulators);
 
   return (
     <div className="p-5">
-      <h2 className="text-2xl font-semibold mb-4">Plants</h2>
+      <h2 className="text-2xl font-semibold mb-4">Insulators</h2>
 
       <FilterControls />
 
       <button
-        onClick={openModal}
+        onClick={openCreateModal}
         className="mb-4 inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
       >
         <i className="fas fa-plus"></i>
-        Add New Plant
+        Add New Insulator
       </button>
 
       <table className="w-full border border-gray-300 rounded-md overflow-hidden">
         <thead className="bg-gray-100">
           <tr>
             <th className="text-left px-4 py-2 border-b border-gray-300">Name</th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Code</th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Status</th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Edit</th>
+            <th className="text-center px-4 py-2 border-b border-gray-300">Status</th>
+            <th className="text-center px-4 py-2 border-b border-gray-300">Edit</th>
           </tr>
         </thead>
         <tbody>
-          {filteredPlants.length === 0 ? (
+          {filteredInsulators.length === 0 ? (
             <tr>
-              <td colSpan="4" className="text-center py-4 text-gray-500">No plants found.</td>
+              <td colSpan="3" className="text-center py-4 text-gray-500">
+                No insulators found.
+              </td>
             </tr>
           ) : (
-            filteredPlants.map(({ id, name, code, status }) => (
+            filteredInsulators.map(({ id, name, status }) => (
               <tr key={id} className="hover:bg-gray-50">
                 <td className="px-4 py-2 border-b border-gray-300">{name}</td>
-                <td className="px-4 py-2 border-b border-gray-300">{code}</td>
-                <td className="px-4 py-2 border-b border-gray-300">
+                <td className="px-4 py-2 border-b border-gray-300 text-center">
                   {status ? (
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
                       Active
@@ -195,11 +171,11 @@ const PlantsTable = () => {
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-2 border-b border-gray-300">
+                <td className="px-4 py-2 border-b border-gray-300 text-center">
                   <button
-                    onClick={() => openEditModal({ id, name, code, status })}
+                    onClick={() => openEditModal({ id, name, status })}
                     className="text-blue-600 hover:underline"
-                    title="Edit Plant"
+                    title="Edit Insulator"
                   >
                     <i className="fa-solid fa-pen-to-square"></i>
                   </button>
@@ -212,76 +188,31 @@ const PlantsTable = () => {
 
       {/* Create Modal */}
       <Modal
-        isOpen={modalIsOpen}
-        onRequestClose={closeModal}
+        isOpen={createModalIsOpen}
+        onRequestClose={closeCreateModal}
         style={customStyles}
-        contentLabel="Add New Plant"
+        contentLabel="Add New Insulator"
       >
-        <h2 className="text-xl font-semibold mb-4">Add New Plant</h2>
-        <form onSubmit={handleSubmit}>
+        <h2 className="text-xl font-semibold mb-4">Add New Insulator</h2>
+        <form onSubmit={handleCreateSubmit}>
           <div className="mb-4">
-            <label htmlFor="name" className="block mb-1 font-medium">
-              Plant Name:
+            <label className="block mb-1 font-medium" htmlFor="name">
+              Name:
             </label>
             <input
               id="name"
               type="text"
               name="name"
               value={formData.name}
-              onChange={handleChange}
-              placeholder="Plant name"
+              onChange={handleCreateChange}
+              placeholder="Insulator Name"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-
-          <div className="mb-4">
-            <label htmlFor="code" className="block mb-1 font-medium">
-              Code:
-            </label>
-            <input
-              id="code"
-              type="text"
-              name="code"
-              value={formData.code}
-              onChange={handleChange}
-              placeholder="Plant code"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Status toggle */}
-          <div className="mb-6 flex items-center gap-3">
-            <label htmlFor="status" className="font-medium">
-              Active Status:
-            </label>
-            <div className="relative">
-              <input
-                type="checkbox"
-                id="status"
-                name="status"
-                checked={formData.status}
-                onChange={handleChange}
-                className="sr-only"
-              />
-              <div
-                className={`w-11 h-6 rounded-full cursor-pointer transition-colors ${
-                  formData.status ? 'bg-blue-600' : 'bg-gray-300'
-                }`}
-                onClick={() => setFormData(prev => ({ ...prev, status: !prev.status }))}
-              />
-              <div
-                className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                  formData.status ? 'translate-x-5' : 'translate-x-0'
-                }`}
-                style={{ pointerEvents: 'none' }}
-              />
-            </div>
-          </div>
-
           <div className="flex justify-end gap-3">
             <button
               type="button"
-              onClick={closeModal}
+              onClick={closeCreateModal}
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
@@ -292,7 +223,7 @@ const PlantsTable = () => {
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Add Plant
+              Add Insulator
             </button>
           </div>
         </form>
@@ -303,13 +234,13 @@ const PlantsTable = () => {
         isOpen={editModalIsOpen}
         onRequestClose={closeEditModal}
         style={customStyles}
-        contentLabel="Edit Plant"
+        contentLabel="Edit Insulator"
       >
-        <h2 className="text-xl font-semibold mb-4">Edit Plant</h2>
+        <h2 className="text-xl font-semibold mb-4">Edit Insulator</h2>
         <form onSubmit={handleEditSubmit}>
           <div className="mb-4">
-            <label htmlFor="edit-name" className="block mb-1 font-medium">
-              Plant Name:
+            <label className="block mb-1 font-medium" htmlFor="edit-name">
+              Name:
             </label>
             <input
               id="edit-name"
@@ -317,22 +248,7 @@ const PlantsTable = () => {
               name="name"
               value={editFormData.name}
               onChange={handleEditChange}
-              placeholder="Plant name"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="edit-code" className="block mb-1 font-medium">
-              Code:
-            </label>
-            <input
-              id="edit-code"
-              type="text"
-              name="code"
-              value={editFormData.code}
-              onChange={handleEditChange}
-              placeholder="Plant code"
+              placeholder="Insulator Name"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -356,7 +272,7 @@ const PlantsTable = () => {
                   editFormData.status ? 'bg-blue-600' : 'bg-gray-300'
                 }`}
                 onClick={() =>
-                  setEditFormData(prev => ({ ...prev, status: !prev.status }))
+                  setEditFormData((prev) => ({ ...prev, status: !prev.status }))
                 }
               />
               <div
@@ -391,4 +307,4 @@ const PlantsTable = () => {
   );
 };
 
-export default PlantsTable;
+export default InsulatorsTable;

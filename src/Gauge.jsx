@@ -13,7 +13,7 @@ const customStyles = {
     bottom: 'auto',
     marginRight: '-50%',
     transform: 'translate(-50%, -50%)',
-    width: '400px',
+    width: '450px',
     padding: '1.5rem',
     borderRadius: '0.5rem',
   },
@@ -21,75 +21,82 @@ const customStyles = {
 
 Modal.setAppElement('#root');
 
-const DataTable = () => {
-  const [dataEntries, setDataEntries] = useState([]);
-  const [colors, setColors] = useState([]);
+const GaugeTable = () => {
+  const [gauges, setGauges] = useState([]);
+  const [insulators, setInsulators] = useState([]);
   const [sections, setSections] = useState([]);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [editModalIsOpen, setEditModalIsOpen] = useState(false);
   const [formData, setFormData] = useState({
-    value: '',
-    colorId: '',
+    gauge: '',
+    rings: '',
+    features: '',
+    insulatorId: '',
     sectionId: '',
     status: true, // default active
   });
   const [editFormData, setEditFormData] = useState({
     id: null,
-    value: '',
-    colorId: '',
+    gauge: '',
+    rings: '',
+    features: '',
+    insulatorId: '',
     sectionId: '',
     status: true,
   });
+
   const user = JSON.parse(sessionStorage.getItem('user'));
   const plant = user?.plant;
 
   // Use hook for filter
-  const { filteredData: filteredDataEntries, FilterControls } = useStatusFilter(dataEntries);
+  const { filteredData: filteredGauges, FilterControls } = useStatusFilter(gauges);
 
-  // Fetch data entries
-  const fetchDataEntries = async () => {
+  // Fetch gauges
+  const fetchGauges = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API}/data/plant`, 
-        { params: { plant } }
-      );
-      setDataEntries(res.data);
+      const res = await axios.get(`${import.meta.env.VITE_API}/gauge`, {
+        params: { plant },
+      });
+      setGauges(res.data);
     } catch (err) {
-      console.error('Error fetching data entries:', err);
-      toast.error('Error fetching data entries.');
+      console.error('Error fetching gauges:', err);
+      toast.error('Error fetching gauges.');
     }
   };
 
-  // Fetch colors for select dropdown
-  const fetchColors = async () => {
+  // Fetch insulators for select dropdown
+  const fetchInsulators = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API}/colors`);
-      setColors(res.data);
+      const res = await axios.get(`${import.meta.env.VITE_API}/insulators`);
+      setInsulators(res.data);
     } catch (err) {
-      console.error('Error fetching colors:', err);
-      toast.error('Error fetching colors.');
+      console.error('Error fetching insulators:', err);
+      toast.error('Error fetching insulators.');
     }
   };
 
   // Fetch sections for select dropdown
   const fetchSections = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API}/sections/plant`, 
-        { params: { plant } }
-      );
+      const res = await axios.get(`${import.meta.env.VITE_API}/sections/plant`, {
+        params: { plant },
+      });
       setSections(res.data);
     } catch (err) {
       console.error('Error fetching sections:', err);
+      toast.error('Error fetching sections.');
     }
   };
 
   useEffect(() => {
-    fetchDataEntries();
-    fetchColors();
+    fetchGauges();
+    fetchInsulators();
     fetchSections();
   }, []);
 
-  const groupedData = filteredDataEntries.reduce((acc, entry) => {
-    const sectionName = entry.section?.name || 'No Section';
+  // Group gauges by section name
+  const groupedData = filteredGauges.reduce((acc, entry) => {
+    const sectionName = entry?.sectionId || 'No Section';
     if (!acc[sectionName]) {
       acc[sectionName] = [];
     }
@@ -99,7 +106,14 @@ const DataTable = () => {
 
   // Open and close create modal
   const openModal = () => {
-    setFormData({ value: '', colorId: '', sectionId: '', status: true });
+    setFormData({
+      gauge: '',
+      rings: '',
+      features: '',
+      insulatorId: '',
+      sectionId: '',
+      status: true,
+    });
     setModalIsOpen(true);
   };
   const closeModal = () => setModalIsOpen(false);
@@ -108,9 +122,11 @@ const DataTable = () => {
   const openEditModal = (entry) => {
     setEditFormData({
       id: entry.id,
-      value: entry.value || '',
-      colorId: entry.color?.id || '',
-      sectionId: entry.section?.id || '',
+      gauge: entry.gauge || '',
+      rings: entry.rings !== undefined && entry.rings !== null ? String(entry.rings) : '',
+      features: entry.features || '',
+      insulatorId: entry.insulatorId || '',
+      sectionId: Number(entry.sectionName) || '',
       status: entry.status ?? true,
     });
     setEditModalIsOpen(true);
@@ -120,7 +136,7 @@ const DataTable = () => {
   // Handle create form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
@@ -129,35 +145,55 @@ const DataTable = () => {
   // Handle edit form input changes
   const handleEditChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setEditFormData(prev => ({
+    setEditFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+  };
+
+  // Validate form fields
+  const validateForm = (data) => {
+    if (!data.gauge.trim()) {
+      toast.error('Gauge is required.');
+      return false;
+    }
+    if (!data.features.trim()) {
+      toast.error('Features is required.');
+      return false;
+    }
+    if (!data.insulatorId) {
+      toast.error('Insulator is required.');
+      return false;
+    }
+    if (!data.sectionId) {
+      toast.error('Section is required.');
+      return false;
+    }
+    return true;
   };
 
   // Submit create form
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.value.trim() || !formData.colorId || !formData.sectionId) {
-      toast.error('Value, color, and section are required.');
-      return;
-    }
+    if (!validateForm(formData)) return;
 
     try {
       const payload = {
-        value: formData.value.trim(),
-        colorId: Number(formData.colorId),
+        gauge: formData.gauge.trim(),
+        rings: formData.rings || '-',
+        features: formData.features.trim(),
+        insulatorId: Number(formData.insulatorId),
         sectionId: Number(formData.sectionId),
         status: formData.status,
       };
-      await axios.post(`${import.meta.env.VITE_API}/data`, payload);
-      toast.success('Data entry created successfully.');
+      await axios.post(`${import.meta.env.VITE_API}/gauge`, payload);
+      toast.success('Gauge created successfully.');
       closeModal();
-      fetchDataEntries();
+      fetchGauges();
     } catch (err) {
-      console.error('Error creating data entry:', err);
-      toast.error(`Failed to create data entry. ${err?.response?.data?.message || ''}`);
+      console.error('Error creating gauge:', err);
+      toast.error(`Failed to create gauge. ${err?.response?.data?.message || ''}`);
     }
   };
 
@@ -165,31 +201,40 @@ const DataTable = () => {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
 
-    if (!editFormData.value.trim() || !editFormData.colorId || !editFormData.sectionId) {
-      toast.error('Value, color, and section are required.');
-      return;
-    }
+    if (!validateForm(editFormData)) return;
 
     try {
       const payload = {
-        value: editFormData.value.trim(),
-        colorId: Number(editFormData.colorId),
+        gauge: editFormData.gauge.trim(),
+        rings: editFormData.rings,
+        features: editFormData.features.trim(),
+        insulatorId: Number(editFormData.insulatorId),
         sectionId: Number(editFormData.sectionId),
         status: editFormData.status,
       };
-      await axios.put(`${import.meta.env.VITE_API}/data/${editFormData.id}`, payload);
-      toast.success('Data entry updated successfully.');
+      await axios.put(`${import.meta.env.VITE_API}/gauge/${editFormData.id}`, payload);
+      toast.success('Gauge updated successfully.');
       closeEditModal();
-      fetchDataEntries();
+      fetchGauges();
     } catch (err) {
-      console.error('Error updating data entry:', err);
-      toast.error(`Failed to update data entry. ${err?.response?.data?.message || ''}`);
+      console.error('Error updating gauge:', err);
+      toast.error(`Failed to update gauge. ${err?.response?.data?.message || ''}`);
     }
   };
 
+  const searchSectionName = (sectionId) => {
+    const section = sections.find(s => s.id === Number(sectionId));
+    return section ? section.name : 'Unknown Section';
+  }
+
+  const searchInsulatorName = (insulatorId) => {
+    const insulator = insulators.find(i => i.id === Number(insulatorId));
+    return insulator ? insulator.name : 'Unknown Insulator';
+  }
+
   return (
     <div className="p-5">
-      <h2 className="text-2xl font-semibold mb-4">Data Entries</h2>
+      <h2 className="text-2xl font-semibold mb-4">Gauges</h2>
 
       <FilterControls />
 
@@ -197,23 +242,24 @@ const DataTable = () => {
         <button
           onClick={openModal}
           className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
-          title="Add New Data"
+          title="Add New Gauge"
         >
           <i className="fas fa-plus"></i>
-          Add New Data
+          Add New Gauge
         </button>
       </div>
 
       <div className="flex flex-row gap-5 flex-wrap">
         {Object.entries(groupedData).map(([sectionName, entries]) => (
           <div key={sectionName} className="mb-10 w-full md:w-1/2 lg:w-1/3">
-            <h3 className="text-lg font-semibold mb-3">Section: {sectionName}</h3>
+            <h3 className="text-lg font-semibold mb-3">Section: {searchSectionName(sectionName)}</h3>
             <table className="w-full border border-gray-300 rounded-md overflow-hidden">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Value</th>
-                  <th className="text-center px-4 py-2 border-b border-gray-300">Color</th>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Color Name</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Gauge</th>
+                  <th className="text-center px-4 py-2 border-b border-gray-300">Rings</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Features</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Insulator</th>
                   <th className="text-left px-4 py-2 border-b border-gray-300">Status</th>
                   <th className="text-left px-4 py-2 border-b border-gray-300">Edit</th>
                 </tr>
@@ -221,22 +267,17 @@ const DataTable = () => {
               <tbody>
                 {entries.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="text-center py-4 text-gray-500">
-                      No data entries found.
+                    <td colSpan="6" className="text-center py-4 text-gray-500">
+                      No gauges found.
                     </td>
                   </tr>
                 ) : (
-                  entries.map(({ id, value, color, status, section }) => (
+                  entries.map(({ id, gauge, rings, features, insulatorId, status }) => (
                     <tr key={id} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 border-b border-gray-300">{value}</td>
-                      <td className="px-4 py-2 border-b border-gray-300 text-center">
-                        <div
-                          className="w-8 h-8 rounded-full border border-gray-300 mx-auto"
-                          style={{ backgroundColor: color?.color || '#ccc' }}
-                          title={color?.color || 'No color'}
-                        />
-                      </td>
-                      <td className="px-4 py-2 border-b border-gray-300">{color?.display || 'N/A'}</td>
+                      <td className="px-4 py-2 border-b border-gray-300">{gauge}</td>
+                      <td className="px-4 py-2 border-b border-gray-300 text-center">{rings}</td>
+                      <td className="px-4 py-2 border-b border-gray-300">{features}</td>
+                      <td className="px-4 py-2 border-b border-gray-300">{searchInsulatorName(insulatorId) || 'N/A'}</td>
                       <td className="px-4 py-2 border-b border-gray-300">
                         {status ? (
                           <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
@@ -250,9 +291,11 @@ const DataTable = () => {
                       </td>
                       <td className="px-4 py-2 border-b border-gray-300">
                         <button
-                          onClick={() => openEditModal({ id, value, color, section, status })}
+                          onClick={() =>
+                            openEditModal({ id, gauge, rings, features, insulatorId, sectionName, status })
+                          }
                           className="text-blue-600 hover:underline"
-                          title="Edit Data Entry"
+                          title="Edit Gauge"
                         >
                           <i className="fa-solid fa-pen-to-square"></i>
                         </button>
@@ -271,40 +314,70 @@ const DataTable = () => {
         isOpen={modalIsOpen}
         onRequestClose={closeModal}
         style={customStyles}
-        contentLabel="Add New Data Entry"
+        contentLabel="Add New Gauge"
       >
-        <h2 className="text-xl font-semibold mb-4">Add New Data Entry</h2>
+        <h2 className="text-xl font-semibold mb-4">Add New Gauge</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block mb-1 font-medium" htmlFor="value">
-              Value:
+            <label className="block mb-1 font-medium" htmlFor="gauge">
+              Gauge:
             </label>
             <input
-              id="value"
+              id="gauge"
               type="text"
-              name="value"
-              value={formData.value}
+              name="gauge"
+              value={formData.gauge}
               onChange={handleChange}
-              placeholder="Enter value"
+              placeholder="Enter gauge"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-4">
-            <label className="block mb-1 font-medium" htmlFor="colorId">
-              Color:
+            <label className="block mb-1 font-medium" htmlFor="rings">
+              Rings:
+            </label>
+            <input
+              id="rings"
+              type="text"
+              name="rings"
+              value={formData.rings}
+              onChange={handleChange}
+              placeholder="Enter number of rings"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block mb-1 font-medium" htmlFor="features">
+              Features:
+            </label>
+            <input
+              id="features"
+              type="text"
+              name="features"
+              value={formData.features}
+              onChange={handleChange}
+              placeholder="Enter features"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block mb-1 font-medium" htmlFor="insulatorId">
+              Insulator:
             </label>
             <select
-              id="colorId"
-              name="colorId"
-              value={formData.colorId}
+              id="insulatorId"
+              name="insulatorId"
+              value={formData.insulatorId}
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select Color --</option>
-              {colors.map(({ id, display }) => (
+              <option value="">-- Select Insulator --</option>
+              {insulators.map(({ id, name }) => (
                 <option key={id} value={id}>
-                  {display}
+                  {name}
                 </option>
               ))}
             </select>
@@ -348,7 +421,7 @@ const DataTable = () => {
                 className={`w-11 h-6 rounded-full cursor-pointer transition-colors ${
                   formData.status ? 'bg-blue-600' : 'bg-gray-300'
                 }`}
-                onClick={() => setFormData(prev => ({ ...prev, status: !prev.status }))}
+                onClick={() => setFormData((prev) => ({ ...prev, status: !prev.status }))}
               />
               <div
                 className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
@@ -373,7 +446,7 @@ const DataTable = () => {
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Add Data
+              Add Gauge
             </button>
           </div>
         </form>
@@ -384,40 +457,70 @@ const DataTable = () => {
         isOpen={editModalIsOpen}
         onRequestClose={closeEditModal}
         style={customStyles}
-        contentLabel="Edit Data Entry"
+        contentLabel="Edit Gauge"
       >
-        <h2 className="text-xl font-semibold mb-4">Edit Data Entry</h2>
+        <h2 className="text-xl font-semibold mb-4">Edit Gauge</h2>
         <form onSubmit={handleEditSubmit}>
           <div className="mb-4">
-            <label className="block mb-1 font-medium" htmlFor="edit-value">
-              Value:
+            <label className="block mb-1 font-medium" htmlFor="edit-gauge">
+              Gauge:
             </label>
             <input
-              id="edit-value"
+              id="edit-gauge"
               type="text"
-              name="value"
-              value={editFormData.value}
+              name="gauge"
+              value={editFormData.gauge}
               onChange={handleEditChange}
-              placeholder="Enter value"
+              placeholder="Enter gauge"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-4">
-            <label className="block mb-1 font-medium" htmlFor="edit-colorId">
-              Color:
+            <label className="block mb-1 font-medium" htmlFor="edit-rings">
+              Rings:
+            </label>
+            <input
+              id="edit-rings"
+              type="text"
+              name="rings"
+              value={editFormData.rings}
+              onChange={handleEditChange}
+              placeholder="Enter number of rings"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block mb-1 font-medium" htmlFor="edit-features">
+              Features:
+            </label>
+            <input
+              id="edit-features"
+              type="text"
+              name="features"
+              value={editFormData.features}
+              onChange={handleEditChange}
+              placeholder="Enter features"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block mb-1 font-medium" htmlFor="edit-insulatorId">
+              Insulator:
             </label>
             <select
-              id="edit-colorId"
-              name="colorId"
-              value={editFormData.colorId}
+              id="edit-insulatorId"
+              name="insulatorId"
+              value={editFormData.insulatorId}
               onChange={handleEditChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select Color --</option>
-              {colors.map(({ id, display }) => (
+              <option value="">-- Select Insulator --</option>
+              {insulators.map(({ id, name }) => (
                 <option key={id} value={id}>
-                  {display}
+                  {name}
                 </option>
               ))}
             </select>
@@ -462,7 +565,7 @@ const DataTable = () => {
                   editFormData.status ? 'bg-blue-600' : 'bg-gray-300'
                 }`}
                 onClick={() =>
-                  setEditFormData(prev => ({ ...prev, status: !prev.status }))
+                  setEditFormData((prev) => ({ ...prev, status: !prev.status }))
                 }
               />
               <div
@@ -497,4 +600,4 @@ const DataTable = () => {
   );
 };
 
-export default DataTable;
+export default GaugeTable;
