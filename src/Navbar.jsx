@@ -49,6 +49,10 @@ function Navbar() {
         <i className="fas fa-plug"></i>
         Gauges
       </NavLink>
+      <NavLink to="/players" className={linkClass}>
+        <i className="fa-solid fa-users"></i>
+        Players
+      </NavLink>
       <NavLink to="/gamesmenu" className={linkClass}>
         <i className="fas fa-gamepad"></i>
         Games
@@ -88,6 +92,7 @@ function Navbar() {
               }}
               className="w-full text-left px-4 py-2 hover:bg-red-600 hover:text-white transition"
             >
+              <i className="fa-solid fa-right-from-bracket"></i>
               Logout
             </button>
           </div>

@@ -46,6 +46,14 @@ const GamesMenu = () => {
       const plantObj = plants.find(p => p.id.toString() === selectedPlant);
       const plantName = plantObj ? plantObj.name : '';
 
+      // Get the game name from the path
+      const gameObj = games.find(g => g.path === gamePath);
+      const gameName = gameObj ? gameObj.name : '';
+
+      // Save to sessionStorage
+      sessionStorage.setItem('plantName', plantName);
+      sessionStorage.setItem('gameName', gameName);
+
       // Navigate to the selected game with plant name as state
       navigate(gamePath, { state: { plantName } });
     }

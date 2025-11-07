@@ -3,6 +3,8 @@ import axios from 'axios';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useLocation } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const ItemTypes = {
   VALUE: 'value', // Define the drag item type for react-dnd
@@ -171,10 +173,15 @@ const ColorOrderGame = () => {
   const [sections, setSections] = useState([]);
   const location = useLocation();
   const plantName = location.state?.plantName || 'Unknown';
+  const navigate = useNavigate();
 
   // Use reducer to manage available and table values grouped by section
   const [state, dispatch] = useReducer(reducer, initialState);
   const { availableValuesBySection, tableValuesBySection } = state;
+
+  // Modal state and clock input state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [clockInput, setClockInput] = useState('');
 
   // Fetch data from API on component mount
   useEffect(() => {
@@ -294,6 +301,12 @@ const ColorOrderGame = () => {
     let allDone = true;
 
     sections.forEach(({ id: sectionId }) => {
+      const originalItems = groupedDataBySection[sectionId] || [];
+      if (originalItems.length === 0) {
+        // Skip empty sections
+        return;
+      }
+
       const complete = isSectionComplete(sectionId);
       newCompletedSections[sectionId] = complete;
       if (!complete) allDone = false;
@@ -303,10 +316,129 @@ const ColorOrderGame = () => {
     setAllCompleted(allDone);
   }, [tableValuesBySection, sections, dataEntries]);
 
+  // Handler to open modal
+  const openModal = () => {
+    setModalOpen(true);
+  };
+
+  // Handler to close modal
+  const closeModal = () => {
+    setModalOpen(false);
+  };
+
+  // Handler to submit player data
+  const handleSubmitPlayer = async () => {
+    const plant = sessionStorage.getItem('plantName') || 'Unknown';
+    const game = sessionStorage.getItem('gameName') || 'Unknown';
+
+    // Prepare completedSections array with section ids that are completed
+    const completedSectionIds = Object.entries(completedSections)
+      .filter(([_, completed]) => completed)
+      .map(([sectionId]) => ({ sectionId: Number(sectionId) }));
+
+    if (!clockInput.trim()) {
+      toast.error('Please enter the clock value.');
+      return;
+    }
+
+    try {
+      await axios.post(`${import.meta.env.VITE_API}/players`, {
+        clock: clockInput.trim(),
+        plant,
+        game,
+        completedSections: completedSectionIds,
+      });
+      toast.success('Player saved successfully!');
+      closeModal();
+      navigate('/gamesmenu'); // Navigate back to games menu after saving
+    } catch (error) {
+      console.error(error);
+      toast.error('Error saving player.');
+    }
+  };
+
+  // Obtain array of completed sections with name and id
+  const completedSectionsList = sections.filter(section => completedSections[section.id]);
+
+  // Determine if there are any completed sections
+  const hasCompletedSections = completedSectionsList.length > 0;
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="p-5">
-        <h2 className="text-2xl font-semibold mb-6">Arrange the values to match the correct color</h2>
+        <h2 className="text-2xl font-semibold mb-6 mr-4 inline">Arrange the values to match the correct color</h2>
+
+        {/* Button to open modal */}
+        <button
+          onClick={openModal}
+          className={!hasCompletedSections ? "mb-6 px-4 py-2 bg-gray-300 text-white rounded" : "mb-6 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"}
+          disabled={!hasCompletedSections} // Inable only if at least one section is completed
+          title={!hasCompletedSections ? 'Complete at least one section to save' : ''}
+        >
+          <i className="mr-1 fa-solid fa-floppy-disk"></i>
+          Save Player
+        </button>
+
+        {/* Modal */}
+        {modalOpen && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
+            <div className="bg-white rounded p-6 w-80 max-w-full">
+              <h3 className="text-lg font-semibold mb-4">Save Player</h3>
+              <div className="mb-4">
+                <label htmlFor="clock" className="block mb-1 font-medium">
+                  Clock
+                </label>
+                <input
+                  id="clock"
+                  type="text"
+                  value={clockInput}
+                  onChange={(e) => setClockInput(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  placeholder="Enter clock value"
+                />
+              </div>
+              <div className="mb-4">
+                <p>
+                  <strong>Plant:</strong> {sessionStorage.getItem('plantName') || 'Unknown'}
+                </p>
+                <p>
+                  <strong>Game:</strong> {sessionStorage.getItem('gameName') || 'Unknown'}
+                </p>
+              </div>
+
+              {/* Mostrar secciones completadas */}
+              <div className="mb-4">
+                <strong>Completed Sections:</strong>
+                {completedSectionsList.length === 0 ? (
+                  <p className="italic text-gray-500">No sections completed yet.</p>
+                ) : (
+                  <ul className="list-disc list-inside max-h-32 overflow-auto mt-1">
+                    {completedSectionsList.map((section) => (
+                      <li key={section.id}>{section.name}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={closeModal}
+                  className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitPlayer}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  disabled={!hasCompletedSections} // También deshabilitar aquí para seguridad
+                  title={!hasCompletedSections ? 'Complete at least one section to save' : ''}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Global message if all sections are complete */}
         {allCompleted && (
@@ -316,7 +448,9 @@ const ColorOrderGame = () => {
         )}
 
         {/* Render UI for each section */}
-        {sections.map(({ id: sectionId, name }) => {
+        {sections
+         .filter(({ id }) => (groupedDataBySection[id] || []).length > 0)
+         .map(({ id: sectionId, name }) => {
           const originalItems = groupedDataBySection[sectionId] || [];
           const availableValues = availableValuesBySection[sectionId] || [];
           const tableValues = tableValuesBySection[sectionId] || [];
