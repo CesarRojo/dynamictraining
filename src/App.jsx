@@ -16,6 +16,7 @@ const InsulatorsTable = lazy(() => import('./Insulators'));
 const GaugeTable = lazy(() => import('./Gauge'));
 const GaugesGame = lazy(() => import('./GaugesGame'));
 const PlayersTable = lazy(() => import('./Players'));
+const PlayersClasification = lazy(() => import('./PlayersClasification'));
 
 function App() {
   const { user } = useContext(AuthContext);
@@ -29,6 +30,7 @@ function App() {
           <Route path="/plants" element={user ? <PlantsTable /> : <Navigate to="/" />} />
           <Route path="/colors" element={user ? <ColorsTable /> : <Navigate to="/" />}/>
           <Route path="/players" element={user ? <PlayersTable /> : <Navigate to="/" />}/>
+          <Route path="/playersclasif" element={user ? <PlayersClasification /> : <Navigate to="/" />}/>
           <Route path="/data" element={user ? <DataTable /> : <Navigate to="/" />} />
           <Route path="/colorordergame" element={<ColorOrderGame />} />
           <Route path="/gaugesgame" element={<GaugesGame />} />

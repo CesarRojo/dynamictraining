@@ -60,7 +60,7 @@ const GaugeTable = () => {
       setGauges(res.data);
     } catch (err) {
       console.error('Error fetching gauges:', err);
-      toast.error('Error fetching gauges.');
+      toast.error('Error al cargar calibres.');
     }
   };
 
@@ -71,7 +71,7 @@ const GaugeTable = () => {
       setInsulators(res.data);
     } catch (err) {
       console.error('Error fetching insulators:', err);
-      toast.error('Error fetching insulators.');
+      toast.error('Error al cargar aislantes.');
     }
   };
 
@@ -84,7 +84,7 @@ const GaugeTable = () => {
       setSections(res.data);
     } catch (err) {
       console.error('Error fetching sections:', err);
-      toast.error('Error fetching sections.');
+      toast.error('Error al cargar secciones.');
     }
   };
 
@@ -96,7 +96,7 @@ const GaugeTable = () => {
 
   // Group gauges by section name
   const groupedData = filteredGauges.reduce((acc, entry) => {
-    const sectionName = entry?.sectionId || 'No Section';
+    const sectionName = entry?.sectionId || 'Sin seccion';
     if (!acc[sectionName]) {
       acc[sectionName] = [];
     }
@@ -154,19 +154,19 @@ const GaugeTable = () => {
   // Validate form fields
   const validateForm = (data) => {
     if (!data.gauge.trim()) {
-      toast.error('Gauge is required.');
+      toast.error('Calibre es requerido.');
       return false;
     }
     if (!data.features.trim()) {
-      toast.error('Features is required.');
+      toast.error('Caracteristica es requerido.');
       return false;
     }
     if (!data.insulatorId) {
-      toast.error('Insulator is required.');
+      toast.error('Aislante es requerido.');
       return false;
     }
     if (!data.sectionId) {
-      toast.error('Section is required.');
+      toast.error('Seccion es requerido.');
       return false;
     }
     return true;
@@ -188,12 +188,12 @@ const GaugeTable = () => {
         status: formData.status,
       };
       await axios.post(`${import.meta.env.VITE_API}/gauge`, payload);
-      toast.success('Gauge created successfully.');
+      toast.success('Calibre creado exitosamente.');
       closeModal();
       fetchGauges();
     } catch (err) {
       console.error('Error creating gauge:', err);
-      toast.error(`Failed to create gauge. ${err?.response?.data?.message || ''}`);
+      toast.error(`Error al crear el calibre. ${err?.response?.data?.message || ''}`);
     }
   };
 
@@ -213,28 +213,28 @@ const GaugeTable = () => {
         status: editFormData.status,
       };
       await axios.put(`${import.meta.env.VITE_API}/gauge/${editFormData.id}`, payload);
-      toast.success('Gauge updated successfully.');
+      toast.success('Calibre actualizado exitosamente.');
       closeEditModal();
       fetchGauges();
     } catch (err) {
       console.error('Error updating gauge:', err);
-      toast.error(`Failed to update gauge. ${err?.response?.data?.message || ''}`);
+      toast.error(`Error al actualizar el calibre. ${err?.response?.data?.message || ''}`);
     }
   };
 
   const searchSectionName = (sectionId) => {
     const section = sections.find(s => s.id === Number(sectionId));
-    return section ? section.name : 'Unknown Section';
+    return section ? section.name : 'Seccion desconocida';
   }
 
   const searchInsulatorName = (insulatorId) => {
     const insulator = insulators.find(i => i.id === Number(insulatorId));
-    return insulator ? insulator.name : 'Unknown Insulator';
+    return insulator ? insulator.name : 'Aislante desconocido';
   }
 
   return (
     <div className="p-5">
-      <h2 className="text-2xl font-semibold mb-4">Gauges</h2>
+      <h2 className="text-2xl font-semibold mb-4">Calibres</h2>
 
       <FilterControls />
 
@@ -245,30 +245,30 @@ const GaugeTable = () => {
           title="Add New Gauge"
         >
           <i className="fas fa-plus"></i>
-          Add New Gauge
+          Nuevo calibre
         </button>
       </div>
 
       <div className="flex flex-row gap-5 flex-wrap">
         {Object.entries(groupedData).map(([sectionName, entries]) => (
           <div key={sectionName} className="mb-10 w-full md:w-1/2 lg:w-1/3">
-            <h3 className="text-lg font-semibold mb-3">Section: {searchSectionName(sectionName)}</h3>
+            <h3 className="text-lg font-semibold mb-3">Seccion: {searchSectionName(sectionName)}</h3>
             <table className="w-full border border-gray-300 rounded-md overflow-hidden">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Gauge</th>
-                  <th className="text-center px-4 py-2 border-b border-gray-300">Rings</th>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Features</th>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Insulator</th>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Status</th>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Edit</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Calibre</th>
+                  <th className="text-center px-4 py-2 border-b border-gray-300">Anillos</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Caracteristicas</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Aislante</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Estatus</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Editar</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="text-center py-4 text-gray-500">
-                      No gauges found.
+                      No se encontraron calibres.
                     </td>
                   </tr>
                 ) : (
@@ -281,11 +281,11 @@ const GaugeTable = () => {
                       <td className="px-4 py-2 border-b border-gray-300">
                         {status ? (
                           <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                            Active
+                            Activo
                           </span>
                         ) : (
                           <span className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                            Inactive
+                            Inactivo
                           </span>
                         )}
                       </td>
@@ -316,11 +316,11 @@ const GaugeTable = () => {
         style={customStyles}
         contentLabel="Add New Gauge"
       >
-        <h2 className="text-xl font-semibold mb-4">Add New Gauge</h2>
+        <h2 className="text-xl font-semibold mb-4">Añadir nuevo calibre</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="gauge">
-              Gauge:
+              Calibre:
             </label>
             <input
               id="gauge"
@@ -328,14 +328,14 @@ const GaugeTable = () => {
               name="gauge"
               value={formData.gauge}
               onChange={handleChange}
-              placeholder="Enter gauge"
+              placeholder="Calibre"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="rings">
-              Rings:
+              Anillos:
             </label>
             <input
               id="rings"
@@ -343,14 +343,14 @@ const GaugeTable = () => {
               name="rings"
               value={formData.rings}
               onChange={handleChange}
-              placeholder="Enter number of rings"
+              placeholder="Ingrese numero de anillos"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="features">
-              Features:
+              Caracteristicas:
             </label>
             <input
               id="features"
@@ -358,14 +358,14 @@ const GaugeTable = () => {
               name="features"
               value={formData.features}
               onChange={handleChange}
-              placeholder="Enter features"
+              placeholder="Ingrese caracteristicas"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="insulatorId">
-              Insulator:
+              Aislante:
             </label>
             <select
               id="insulatorId"
@@ -374,7 +374,7 @@ const GaugeTable = () => {
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select Insulator --</option>
+              <option value="">-- Seleccione Aislante --</option>
               {insulators.map(({ id, name }) => (
                 <option key={id} value={id}>
                   {name}
@@ -385,7 +385,7 @@ const GaugeTable = () => {
 
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="sectionId">
-              Section:
+              Seccion:
             </label>
             <select
               id="sectionId"
@@ -394,7 +394,7 @@ const GaugeTable = () => {
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select Section --</option>
+              <option value="">-- Seleccione seccion --</option>
               {sections.map(({ id, name }) => (
                 <option key={id} value={id}>
                   {name}
@@ -406,7 +406,7 @@ const GaugeTable = () => {
           {/* Status toggle */}
           <div className="mb-6 flex items-center gap-3">
             <label htmlFor="status" className="font-medium">
-              Active Status:
+              Estatus activo:
             </label>
             <div className="relative">
               <input
@@ -439,14 +439,14 @@ const GaugeTable = () => {
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Add Gauge
+              Añadir calibre
             </button>
           </div>
         </form>
@@ -459,11 +459,11 @@ const GaugeTable = () => {
         style={customStyles}
         contentLabel="Edit Gauge"
       >
-        <h2 className="text-xl font-semibold mb-4">Edit Gauge</h2>
+        <h2 className="text-xl font-semibold mb-4">Editar calibre</h2>
         <form onSubmit={handleEditSubmit}>
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="edit-gauge">
-              Gauge:
+              Calibre:
             </label>
             <input
               id="edit-gauge"
@@ -471,14 +471,14 @@ const GaugeTable = () => {
               name="gauge"
               value={editFormData.gauge}
               onChange={handleEditChange}
-              placeholder="Enter gauge"
+              placeholder="Ingrese calibre"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="edit-rings">
-              Rings:
+              Anillos:
             </label>
             <input
               id="edit-rings"
@@ -486,14 +486,14 @@ const GaugeTable = () => {
               name="rings"
               value={editFormData.rings}
               onChange={handleEditChange}
-              placeholder="Enter number of rings"
+              placeholder="Ingrese numero de anillos"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="edit-features">
-              Features:
+              Caracteristicas:
             </label>
             <input
               id="edit-features"
@@ -501,14 +501,14 @@ const GaugeTable = () => {
               name="features"
               value={editFormData.features}
               onChange={handleEditChange}
-              placeholder="Enter features"
+              placeholder="Ingrese caracteristicas"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="edit-insulatorId">
-              Insulator:
+              Aislante:
             </label>
             <select
               id="edit-insulatorId"
@@ -517,7 +517,7 @@ const GaugeTable = () => {
               onChange={handleEditChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select Insulator --</option>
+              <option value="">-- Seleccione aislante --</option>
               {insulators.map(({ id, name }) => (
                 <option key={id} value={id}>
                   {name}
@@ -528,7 +528,7 @@ const GaugeTable = () => {
 
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="edit-sectionId">
-              Section:
+              Seccion:
             </label>
             <select
               id="edit-sectionId"
@@ -537,7 +537,7 @@ const GaugeTable = () => {
               onChange={handleEditChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select Section --</option>
+              <option value="">-- Seleccione seccion --</option>
               {sections.map(({ id, name }) => (
                 <option key={id} value={id}>
                   {name}
@@ -549,7 +549,7 @@ const GaugeTable = () => {
           {/* Status toggle */}
           <div className="mb-6 flex items-center gap-3">
             <label htmlFor="edit-status" className="font-medium">
-              Active Status:
+              Estatus activo:
             </label>
             <div className="relative">
               <input
@@ -584,14 +584,14 @@ const GaugeTable = () => {
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Save Changes
+              Guardar cambios
             </button>
           </div>
         </form>

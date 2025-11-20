@@ -22,19 +22,19 @@ const useStatusFilter = (data) => {
         className={`px-3 py-1 rounded ${statusFilter === 'active' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}
         onClick={() => setStatusFilter('active')}
       >
-        <i className="fas fa-check"></i> Actives
+        <i className="fas fa-check"></i> Activos
       </button>
       <button
         className={`px-3 py-1 rounded ${statusFilter === 'inactive' ? 'bg-red-600 text-white' : 'bg-gray-200'}`}
         onClick={() => setStatusFilter('inactive')}
       >
-        <i className="fas fa-times"></i> Inactives
+        <i className="fas fa-times"></i> Inactivos
       </button>
       <button
         className={`px-3 py-1 rounded ${statusFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         onClick={() => setStatusFilter('all')}
       >
-        <i className="fas fa-list"></i> All
+        <i className="fas fa-list"></i> Todos
       </button>
     </div>
   );

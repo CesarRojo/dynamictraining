@@ -107,7 +107,7 @@ const PlantsTable = () => {
     e.preventDefault();
 
     if (!formData.name.trim() || !formData.code.trim()) {
-      toast.error('Name and code are required.');
+      toast.error('Nombre y color requerido.');
       return;
     }
 
@@ -121,7 +121,7 @@ const PlantsTable = () => {
       fetchPlants();
     } catch (err) {
       console.error('Error creating plant:', err);
-      toast.error(`Failed to create plant. ${err?.response?.data?.message || ''}`);
+      toast.error(`Error al crear planta. ${err?.response?.data?.message || ''}`);
     }
   };
 
@@ -130,7 +130,7 @@ const PlantsTable = () => {
     e.preventDefault();
 
     if (!editFormData.name.trim() || !editFormData.code.trim()) {
-      toast.error('Name and code are required.');
+      toast.error('Nombre y color requerido.');
       return;
     }
 
@@ -144,7 +144,7 @@ const PlantsTable = () => {
       fetchPlants();
     } catch (err) {
       console.error('Error updating plant:', err);
-      toast.error(`Failed to update plant. ${err?.response?.data?.message || ''}`);
+      toast.error(`Error al actualizar planta. ${err?.response?.data?.message || ''}`);
     }
   };
 
@@ -153,7 +153,7 @@ const PlantsTable = () => {
 
   return (
     <div className="p-5">
-      <h2 className="text-2xl font-semibold mb-4">Plants</h2>
+      <h2 className="text-2xl font-semibold mb-4">Plantas</h2>
 
       <FilterControls />
 
@@ -162,22 +162,22 @@ const PlantsTable = () => {
         className="mb-4 inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
       >
         <i className="fas fa-plus"></i>
-        Add New Plant
+        Nueva planta
       </button>
 
       <table className="w-full border border-gray-300 rounded-md overflow-hidden">
         <thead className="bg-gray-100">
           <tr>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Name</th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Code</th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Status</th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Edit</th>
+            <th className="text-left px-4 py-2 border-b border-gray-300">Nombre</th>
+            <th className="text-left px-4 py-2 border-b border-gray-300">Codigo</th>
+            <th className="text-left px-4 py-2 border-b border-gray-300">Estatus</th>
+            <th className="text-left px-4 py-2 border-b border-gray-300">Editar</th>
           </tr>
         </thead>
         <tbody>
           {filteredPlants.length === 0 ? (
             <tr>
-              <td colSpan="4" className="text-center py-4 text-gray-500">No plants found.</td>
+              <td colSpan="4" className="text-center py-4 text-gray-500">Sin plantas.</td>
             </tr>
           ) : (
             filteredPlants.map(({ id, name, code, status }) => (
@@ -187,11 +187,11 @@ const PlantsTable = () => {
                 <td className="px-4 py-2 border-b border-gray-300">
                   {status ? (
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                      Active
+                      Activo
                     </span>
                   ) : (
                     <span className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                      Inactive
+                      Inactivo
                     </span>
                   )}
                 </td>
@@ -199,7 +199,7 @@ const PlantsTable = () => {
                   <button
                     onClick={() => openEditModal({ id, name, code, status })}
                     className="text-blue-600 hover:underline"
-                    title="Edit Plant"
+                    title="Editar Planta"
                   >
                     <i className="fa-solid fa-pen-to-square"></i>
                   </button>
@@ -217,11 +217,11 @@ const PlantsTable = () => {
         style={customStyles}
         contentLabel="Add New Plant"
       >
-        <h2 className="text-xl font-semibold mb-4">Add New Plant</h2>
+        <h2 className="text-xl font-semibold mb-4">Añadir nueva planta</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label htmlFor="name" className="block mb-1 font-medium">
-              Plant Name:
+              Nombre planta:
             </label>
             <input
               id="name"
@@ -229,14 +229,14 @@ const PlantsTable = () => {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="Plant name"
+              placeholder="Nombre planta"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-4">
             <label htmlFor="code" className="block mb-1 font-medium">
-              Code:
+              Codigo:
             </label>
             <input
               id="code"
@@ -244,7 +244,7 @@ const PlantsTable = () => {
               name="code"
               value={formData.code}
               onChange={handleChange}
-              placeholder="Plant code"
+              placeholder="Codigo planta"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -252,7 +252,7 @@ const PlantsTable = () => {
           {/* Status toggle */}
           <div className="mb-6 flex items-center gap-3">
             <label htmlFor="status" className="font-medium">
-              Active Status:
+              Estatus activo:
             </label>
             <div className="relative">
               <input
@@ -285,14 +285,14 @@ const PlantsTable = () => {
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Add Plant
+              Añadir planta
             </button>
           </div>
         </form>
@@ -305,11 +305,11 @@ const PlantsTable = () => {
         style={customStyles}
         contentLabel="Edit Plant"
       >
-        <h2 className="text-xl font-semibold mb-4">Edit Plant</h2>
+        <h2 className="text-xl font-semibold mb-4">Editar Planta</h2>
         <form onSubmit={handleEditSubmit}>
           <div className="mb-4">
             <label htmlFor="edit-name" className="block mb-1 font-medium">
-              Plant Name:
+              Nombre planta:
             </label>
             <input
               id="edit-name"
@@ -317,14 +317,14 @@ const PlantsTable = () => {
               name="name"
               value={editFormData.name}
               onChange={handleEditChange}
-              placeholder="Plant name"
+              placeholder="Nombre planta"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-4">
             <label htmlFor="edit-code" className="block mb-1 font-medium">
-              Code:
+              Codigo:
             </label>
             <input
               id="edit-code"
@@ -332,7 +332,7 @@ const PlantsTable = () => {
               name="code"
               value={editFormData.code}
               onChange={handleEditChange}
-              placeholder="Plant code"
+              placeholder="Codigo planta"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -340,7 +340,7 @@ const PlantsTable = () => {
           {/* Status toggle */}
           <div className="mb-6 flex items-center gap-3">
             <label htmlFor="edit-status" className="font-medium">
-              Active Status:
+              Estatus activo:
             </label>
             <div className="relative">
               <input
@@ -375,14 +375,14 @@ const PlantsTable = () => {
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Save Changes
+              Guardar cambios
             </button>
           </div>
         </form>

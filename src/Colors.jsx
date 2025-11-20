@@ -94,12 +94,12 @@ const ColorsTable = () => {
     e.preventDefault();
 
     if (!formData.color || !formData.display) {
-      toast.error('Both color and display name are required.');
+      toast.error('El color y nombre son requeridos.');
       return;
     }
 
     if (!isValidHex(formData.color)) {
-      toast.error('Color must be a valid hexadecimal code (e.g. #FF0000).');
+      toast.error('El color debe ser un codigo hexadecimal valido (ej. #FF0000).');
       return;
     }
 
@@ -109,7 +109,7 @@ const ColorsTable = () => {
       fetchColors();
     } catch (err) {
       console.error('Error creating color:', err);
-      toast.error(`Failed to create color. ${err?.response?.data?.message || ''}`);
+      toast.error(`Error al crear color. ${err?.response?.data?.message || ''}`);
     }
   };
 
@@ -118,12 +118,12 @@ const ColorsTable = () => {
     e.preventDefault();
 
     if (!editFormData.color || !editFormData.display) {
-      toast.error('Both color and display name are required.');
+      toast.error('El color y nombre son requeridos.');
       return;
     }
 
     if (!isValidHex(editFormData.color)) {
-      toast.error('Color must be a valid hexadecimal code (e.g. #FF0000).');
+      toast.error('El color debe ser un codigo hexadecimal valido (ej. #FF0000).');
       return;
     }
 
@@ -137,7 +137,7 @@ const ColorsTable = () => {
       fetchColors();
     } catch (err) {
       console.error('Error updating color:', err);
-      toast.error(`Failed to update color. ${err?.response?.data?.message || ''}`);
+      toast.error(`Error al crear color. ${err?.response?.data?.message || ''}`);
     }
   };
 
@@ -146,7 +146,7 @@ const ColorsTable = () => {
 
   return (
     <div className="p-5">
-      <h2 className="text-2xl font-semibold mb-4">Colors</h2>
+      <h2 className="text-2xl font-semibold mb-4">Colores</h2>
 
       <FilterControls />
 
@@ -155,23 +155,23 @@ const ColorsTable = () => {
         className="mb-4 inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
       >
         <i className="fas fa-plus"></i>
-        Add New Color
+        Nuevo color
       </button>
 
       <table className="w-full border border-gray-300 rounded-md overflow-hidden">
         <thead className="bg-gray-100">
           <tr>
             <th className="text-center px-4 py-2 border-b border-gray-300">Color</th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Name</th>
-            <th className="text-center px-4 py-2 border-b border-gray-300">Status</th>
-            <th className="text-center px-4 py-2 border-b border-gray-300">Edit</th>
+            <th className="text-left px-4 py-2 border-b border-gray-300">Nombre</th>
+            <th className="text-center px-4 py-2 border-b border-gray-300">Estatus</th>
+            <th className="text-center px-4 py-2 border-b border-gray-300">Editar</th>
           </tr>
         </thead>
         <tbody>
           {filteredColors.length === 0 ? (
             <tr>
               <td colSpan="4" className="text-center py-4 text-gray-500">
-                No colors found.
+                No se encontraron colores.
               </td>
             </tr>
           ) : (
@@ -188,11 +188,11 @@ const ColorsTable = () => {
                 <td className="px-4 py-2 border-b border-gray-300 text-center">
                   {status ? (
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                      Active
+                      Activo
                     </span>
                   ) : (
                     <span className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                      Inactive
+                      Inactivo
                     </span>
                   )}
                 </td>
@@ -218,7 +218,7 @@ const ColorsTable = () => {
         style={customStyles}
         contentLabel="Add New Color"
       >
-        <h2 className="text-xl font-semibold mb-4">Add New Color</h2>
+        <h2 className="text-xl font-semibold mb-4">Añadir nuevo color</h2>
         <form onSubmit={handleCreateSubmit}>
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="colorPicker">
@@ -250,7 +250,7 @@ const ColorsTable = () => {
           </div>
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="display">
-              Display Name:
+              Nombre:
             </label>
             <input
               id="display"
@@ -258,7 +258,7 @@ const ColorsTable = () => {
               name="display"
               value={formData.display}
               onChange={handleCreateChange}
-              placeholder="Red"
+              placeholder="Rojo"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -269,14 +269,14 @@ const ColorsTable = () => {
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Add Color
+              Añadir Color
             </button>
           </div>
         </form>
@@ -289,7 +289,7 @@ const ColorsTable = () => {
         style={customStyles}
         contentLabel="Edit Color"
       >
-        <h2 className="text-xl font-semibold mb-4">Edit Color</h2>
+        <h2 className="text-xl font-semibold mb-4">Editar Color</h2>
         <form onSubmit={handleEditSubmit}>
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="edit-colorPicker">
@@ -321,7 +321,7 @@ const ColorsTable = () => {
           </div>
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="edit-display">
-              Display Name:
+              Nombre:
             </label>
             <input
               id="edit-display"
@@ -329,7 +329,7 @@ const ColorsTable = () => {
               name="display"
               value={editFormData.display}
               onChange={handleEditChange}
-              placeholder="Red"
+              placeholder="Rojo"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -337,7 +337,7 @@ const ColorsTable = () => {
           {/* Status toggle */}
           <div className="mb-6 flex items-center gap-3">
             <label htmlFor="edit-status" className="font-medium">
-              Active Status:
+              Estatus activo:
             </label>
             <div className="relative">
               <input
@@ -372,14 +372,14 @@ const ColorsTable = () => {
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Save Changes
+              Guardar cambios
             </button>
           </div>
         </form>

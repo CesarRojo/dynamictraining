@@ -25,17 +25,19 @@ function Navbar() {
 
   return (
     <nav className="bg-white shadow-md p-4 flex items-center gap-4">
-      <NavLink to="/plants" className={linkClass}>
-        <i className="fas fa-city"></i>
-        Plants
-      </NavLink>
+      {user?.plant === 'Super' && (
+        <NavLink to="/plants" className={linkClass}>
+          <i className="fas fa-city"></i>
+          Plantas
+        </NavLink>
+      )}
       <NavLink to="/sections" className={linkClass}>
         <i className="fas fa-location-dot"></i>
-        Sections
+        Secciones
       </NavLink>
       <NavLink to="/colors" className={linkClass}>
         <i className="fas fa-palette"></i>
-        Colors
+        Colores
       </NavLink>
       <NavLink to="/data" className={linkClass}>
         <i className="fas fa-table"></i>
@@ -43,19 +45,19 @@ function Navbar() {
       </NavLink>
       <NavLink to="/insulators" className={linkClass}>
         <i className="fas fa-bolt"></i>
-        Insulators
+        Aislantes
       </NavLink>
       <NavLink to="/gauges" className={linkClass}>
         <i className="fas fa-plug"></i>
-        Gauges
+        Calibres
       </NavLink>
       <NavLink to="/players" className={linkClass}>
         <i className="fa-solid fa-users"></i>
-        Players
+        Jugadores
       </NavLink>
       <NavLink to="/gamesmenu" className={linkClass}>
         <i className="fas fa-gamepad"></i>
-        Games
+        Juegos
       </NavLink>
 
       {/* Spacer */}
@@ -93,7 +95,7 @@ function Navbar() {
               className="w-full text-left px-4 py-2 hover:bg-red-600 hover:text-white transition"
             >
               <i className="fa-solid fa-right-from-bracket"></i>
-              Logout
+              Cerrar sesión
             </button>
           </div>
         )}

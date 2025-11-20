@@ -55,7 +55,7 @@ const DataTable = () => {
       setDataEntries(res.data);
     } catch (err) {
       console.error('Error fetching data entries:', err);
-      toast.error('Error fetching data entries.');
+      toast.error('Error al cargar data.');
     }
   };
 
@@ -66,7 +66,7 @@ const DataTable = () => {
       setColors(res.data);
     } catch (err) {
       console.error('Error fetching colors:', err);
-      toast.error('Error fetching colors.');
+      toast.error('Error al cargar colores.');
     }
   };
 
@@ -89,7 +89,7 @@ const DataTable = () => {
   }, []);
 
   const groupedData = filteredDataEntries.reduce((acc, entry) => {
-    const sectionName = entry.section?.name || 'No Section';
+    const sectionName = entry.section?.name || 'Sin seccion';
     if (!acc[sectionName]) {
       acc[sectionName] = [];
     }
@@ -140,7 +140,7 @@ const DataTable = () => {
     e.preventDefault();
 
     if (!formData.value.trim() || !formData.colorId || !formData.sectionId) {
-      toast.error('Value, color, and section are required.');
+      toast.error('Valor, color y seccion son requeridos.');
       return;
     }
 
@@ -152,12 +152,12 @@ const DataTable = () => {
         status: formData.status,
       };
       await axios.post(`${import.meta.env.VITE_API}/data`, payload);
-      toast.success('Data entry created successfully.');
+      toast.success('Data creada exitosamente.');
       closeModal();
       fetchDataEntries();
     } catch (err) {
       console.error('Error creating data entry:', err);
-      toast.error(`Failed to create data entry. ${err?.response?.data?.message || ''}`);
+      toast.error(`Error al crear data. ${err?.response?.data?.message || ''}`);
     }
   };
 
@@ -166,7 +166,7 @@ const DataTable = () => {
     e.preventDefault();
 
     if (!editFormData.value.trim() || !editFormData.colorId || !editFormData.sectionId) {
-      toast.error('Value, color, and section are required.');
+      toast.error('Valor, color y seccion son requeridos.');
       return;
     }
 
@@ -178,18 +178,18 @@ const DataTable = () => {
         status: editFormData.status,
       };
       await axios.put(`${import.meta.env.VITE_API}/data/${editFormData.id}`, payload);
-      toast.success('Data entry updated successfully.');
+      toast.success('Data actualizada exitosamente.');
       closeEditModal();
       fetchDataEntries();
     } catch (err) {
       console.error('Error updating data entry:', err);
-      toast.error(`Failed to update data entry. ${err?.response?.data?.message || ''}`);
+      toast.error(`Error al actualizar data. ${err?.response?.data?.message || ''}`);
     }
   };
 
   return (
     <div className="p-5">
-      <h2 className="text-2xl font-semibold mb-4">Data Entries</h2>
+      <h2 className="text-2xl font-semibold mb-4">Data</h2>
 
       <FilterControls />
 
@@ -200,29 +200,29 @@ const DataTable = () => {
           title="Add New Data"
         >
           <i className="fas fa-plus"></i>
-          Add New Data
+          Nueva data
         </button>
       </div>
 
       <div className="flex flex-row gap-5 flex-wrap">
         {Object.entries(groupedData).map(([sectionName, entries]) => (
           <div key={sectionName} className="mb-10 w-full md:w-1/2 lg:w-1/3">
-            <h3 className="text-lg font-semibold mb-3">Section: {sectionName}</h3>
+            <h3 className="text-lg font-semibold mb-3">Seccion: {sectionName}</h3>
             <table className="w-full border border-gray-300 rounded-md overflow-hidden">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Value</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Valor</th>
                   <th className="text-center px-4 py-2 border-b border-gray-300">Color</th>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Color Name</th>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Status</th>
-                  <th className="text-left px-4 py-2 border-b border-gray-300">Edit</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Nombre color</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Estatus</th>
+                  <th className="text-left px-4 py-2 border-b border-gray-300">Editar</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="text-center py-4 text-gray-500">
-                      No data entries found.
+                      No se encontró data.
                     </td>
                   </tr>
                 ) : (
@@ -240,11 +240,11 @@ const DataTable = () => {
                       <td className="px-4 py-2 border-b border-gray-300">
                         {status ? (
                           <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                            Active
+                            Activo
                           </span>
                         ) : (
                           <span className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                            Inactive
+                            Inactivo
                           </span>
                         )}
                       </td>
@@ -273,11 +273,11 @@ const DataTable = () => {
         style={customStyles}
         contentLabel="Add New Data Entry"
       >
-        <h2 className="text-xl font-semibold mb-4">Add New Data Entry</h2>
+        <h2 className="text-xl font-semibold mb-4">Añadir nueva data</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="value">
-              Value:
+              Valor:
             </label>
             <input
               id="value"
@@ -285,7 +285,7 @@ const DataTable = () => {
               name="value"
               value={formData.value}
               onChange={handleChange}
-              placeholder="Enter value"
+              placeholder="Ingrese valor"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -301,7 +301,7 @@ const DataTable = () => {
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select Color --</option>
+              <option value="">-- Seleccione Color --</option>
               {colors.map(({ id, display }) => (
                 <option key={id} value={id}>
                   {display}
@@ -312,7 +312,7 @@ const DataTable = () => {
 
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="sectionId">
-              Section:
+              Seccion:
             </label>
             <select
               id="sectionId"
@@ -321,7 +321,7 @@ const DataTable = () => {
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select Section --</option>
+              <option value="">-- Seleccione sección --</option>
               {sections.map(({ id, name }) => (
                 <option key={id} value={id}>
                   {name}
@@ -333,7 +333,7 @@ const DataTable = () => {
           {/* Status toggle */}
           <div className="mb-6 flex items-center gap-3">
             <label htmlFor="status" className="font-medium">
-              Active Status:
+              Estatus activo:
             </label>
             <div className="relative">
               <input
@@ -366,14 +366,14 @@ const DataTable = () => {
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Add Data
+              Añadir data
             </button>
           </div>
         </form>
@@ -386,11 +386,11 @@ const DataTable = () => {
         style={customStyles}
         contentLabel="Edit Data Entry"
       >
-        <h2 className="text-xl font-semibold mb-4">Edit Data Entry</h2>
+        <h2 className="text-xl font-semibold mb-4">Editar Data</h2>
         <form onSubmit={handleEditSubmit}>
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="edit-value">
-              Value:
+              Valor:
             </label>
             <input
               id="edit-value"
@@ -398,7 +398,7 @@ const DataTable = () => {
               name="value"
               value={editFormData.value}
               onChange={handleEditChange}
-              placeholder="Enter value"
+              placeholder="Ingrese valor"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -414,7 +414,7 @@ const DataTable = () => {
               onChange={handleEditChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select Color --</option>
+              <option value="">-- Seleccione Color --</option>
               {colors.map(({ id, display }) => (
                 <option key={id} value={id}>
                   {display}
@@ -434,7 +434,7 @@ const DataTable = () => {
               onChange={handleEditChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select Section --</option>
+              <option value="">-- Seleccione Seccion --</option>
               {sections.map(({ id, name }) => (
                 <option key={id} value={id}>
                   {name}
@@ -446,7 +446,7 @@ const DataTable = () => {
           {/* Status toggle */}
           <div className="mb-6 flex items-center gap-3">
             <label htmlFor="edit-status" className="font-medium">
-              Active Status:
+              Estatus activo:
             </label>
             <div className="relative">
               <input
@@ -481,14 +481,14 @@ const DataTable = () => {
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Save Changes
+              Guardar cambios
             </button>
           </div>
         </form>

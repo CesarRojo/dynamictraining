@@ -53,7 +53,7 @@ const SectionsTable = () => {
       setPlants(normalizedData);
     } catch (err) {
       console.error('Error fetching plants:', err);
-      toast.error('Failed to load plants.');
+      toast.error('Error al cargar plantas.');
     }
   };
 
@@ -102,11 +102,11 @@ const SectionsTable = () => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      toast.error('Name is required.');
+      toast.error('Nombre es requerido.');
       return;
     }
     if (!formData.plantId) {
-      toast.error('Please select a plant.');
+      toast.error('Porfavor seleccione una planta.');
       return;
     }
 
@@ -116,12 +116,12 @@ const SectionsTable = () => {
         name: formData.name,
         plantId: Number(formData.plantId),
       });
-      toast.success('Section created successfully');
+      toast.success('Sección creada exitosamente');
       closeModal();
       fetchSections();
     } catch (err) {
       console.error('Error creating section:', err);
-      toast.error(`Failed to create section. ${err?.response?.data?.message || ''}`);
+      toast.error(`Error al crear seccion. ${err?.response?.data?.message || ''}`);
     }
   };
 
@@ -130,7 +130,7 @@ const SectionsTable = () => {
     e.preventDefault();
 
     if (!editFormData.name.trim()) {
-      toast.error('Name is required.');
+      toast.error('Nombre es requerido.');
       return;
     }
 
@@ -139,12 +139,12 @@ const SectionsTable = () => {
         name: editFormData.name,
         status: editFormData.status,
       });
-      toast.success('Section updated successfully');
+      toast.success('Seccion actualizada exitosamente');
       closeEditModal();
       fetchSections();
     } catch (err) {
       console.error('Error updating section:', err);
-      toast.error(`Failed to update section. ${err?.response?.data?.message || ''}`);
+      toast.error(`Error al actualizar seccion. ${err?.response?.data?.message || ''}`);
     }
   };
 
@@ -158,7 +158,7 @@ const SectionsTable = () => {
 
   return (
     <div className="p-5">
-      <h2 className="text-2xl font-semibold mb-4">Sections</h2>
+      <h2 className="text-2xl font-semibold mb-4">Secciones</h2>
 
       <FilterControls />
 
@@ -167,23 +167,23 @@ const SectionsTable = () => {
         className="mb-4 inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
       >
         <i className="fas fa-plus"></i>
-        Add New Section
+        Nueva sección
       </button>
 
       <table className="w-full border border-gray-300 rounded-md overflow-hidden">
         <thead className="bg-gray-100">
           <tr>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Name</th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Plant</th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Status</th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">Edit</th>
+            <th className="text-left px-4 py-2 border-b border-gray-300">Nombre</th>
+            <th className="text-left px-4 py-2 border-b border-gray-300">Planta</th>
+            <th className="text-left px-4 py-2 border-b border-gray-300">Estatus</th>
+            <th className="text-left px-4 py-2 border-b border-gray-300">Editar</th>
           </tr>
         </thead>
         <tbody>
           {filteredSections.length === 0 ? (
             <tr>
               <td className="text-center py-4 text-gray-500" colSpan={3}>
-                No sections found.
+                No se encontraron secciones.
               </td>
             </tr>
           ) : (
@@ -194,11 +194,11 @@ const SectionsTable = () => {
                 <td className="px-4 py-2 border-b border-gray-300">
                   {status ? (
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                      Active
+                      Activo
                     </span>
                   ) : (
                     <span className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                      Inactive
+                      Inactivo
                     </span>
                   )}
                 </td>
@@ -223,11 +223,11 @@ const SectionsTable = () => {
         style={customStyles}
         contentLabel="Add New Section"
       >
-        <h2 className="text-xl font-semibold mb-4">Add New Section</h2>
+        <h2 className="text-xl font-semibold mb-4">Añadir nueva sección</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="name">
-              Section Name:
+              Nombre seccion:
             </label>
             <input
               id="name"
@@ -235,14 +235,14 @@ const SectionsTable = () => {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="Section name"
+              placeholder="Nombre seccion"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-6">
             <label className="block mb-1 font-medium" htmlFor="plantId">
-              Select Plant:
+              Seleccione una planta:
             </label>
             <select
               id="plantId"
@@ -251,7 +251,7 @@ const SectionsTable = () => {
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">-- Select a plant --</option>
+              <option value="">-- Seleccione planta --</option>
               {plants.map(plant => (
                 <option key={plant.id} value={plant.id}>
                   {plant.name}
@@ -267,14 +267,14 @@ const SectionsTable = () => {
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Add Section
+              Añadir seccion
             </button>
           </div>
         </form>
@@ -287,11 +287,11 @@ const SectionsTable = () => {
         style={customStyles}
         contentLabel="Edit Section"
       >
-        <h2 className="text-xl font-semibold mb-4">Edit Section</h2>
+        <h2 className="text-xl font-semibold mb-4">Editar Seccion</h2>
         <form onSubmit={handleEditSubmit}>
           <div className="mb-4">
             <label className="block mb-1 font-medium" htmlFor="edit-name">
-              Section Name:
+              Nombre seccion:
             </label>
             <input
               id="edit-name"
@@ -299,14 +299,14 @@ const SectionsTable = () => {
               name="name"
               value={editFormData.name}
               onChange={handleEditChange}
-              placeholder="Section name"
+              placeholder="Nombre seccion"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div className="mb-6 flex items-center gap-3">
             <label htmlFor="edit-status" className="font-medium">
-              Active Status:
+              Estatus activo:
             </label>
             <div className="relative">
               <input
@@ -341,14 +341,14 @@ const SectionsTable = () => {
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
             >
               <i className="fas fa-times"></i>
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               <i className="fas fa-check"></i>
-              Save Changes
+              Guardar cambios
             </button>
           </div>
         </form>

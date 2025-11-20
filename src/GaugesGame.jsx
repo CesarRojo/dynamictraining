@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useReducer, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useReducer, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -19,12 +19,14 @@ const DraggableValueCell = ({
   moveValueInTable,
   assignValueToCell,
   isCorrect,
+  disabled,
 }) => {
   const ref = React.useRef(null);
 
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ItemTypes.VALUE,
     drop: (item) => {
+      if (disabled) return;
       if (item.from === 'list') {
         assignValueToCell(sectionId, index, item.id, field);
       } else if (item.from === 'table') {
@@ -34,7 +36,7 @@ const DraggableValueCell = ({
       }
     },
     // Allow drop if same section and same field (gauge or rings)
-    canDrop: (item) => item.sectionId === sectionId && item.field === field,
+    canDrop: (item) => !disabled && item.sectionId === sectionId && item.field === field,
     collect: (monitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
@@ -44,7 +46,7 @@ const DraggableValueCell = ({
   const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.VALUE,
     item: { id: val?.id, index, sectionId, from: 'table', field },
-    canDrag: !!val,
+    canDrag: !disabled && !!val,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -61,7 +63,7 @@ const DraggableValueCell = ({
       ref={ref}
       className={`${bgColorClass} min-w-[100px] h-10 align-middle text-center font-bold select-none ${
         isDragging ? 'opacity-50' : 'opacity-100'
-      } ${val ? 'cursor-move' : canDrop ? 'cursor-pointer' : 'cursor-default'}`}
+      } ${val ? (disabled ? 'cursor-default' : 'cursor-move') : canDrop && !disabled ? 'cursor-pointer' : 'cursor-default'}`}
       title={val ? val.value : 'Drop value here'}
     >
       {val ? val.value : ''}
@@ -70,8 +72,9 @@ const DraggableValueCell = ({
 };
 
 // Select cell for features field
-const FeaturesSelectCell = ({ val, index, sectionId, featureOptions, updateFeature }) => {
+const FeaturesSelectCell = ({ val, index, sectionId, featureOptions, updateFeature, disabled }) => {
   const handleChange = (e) => {
+    if (disabled) return;
     updateFeature(sectionId, index, e.target.value);
   };
 
@@ -81,8 +84,9 @@ const FeaturesSelectCell = ({ val, index, sectionId, featureOptions, updateFeatu
         className="w-full h-full px-2 border border-gray-300 rounded"
         value={val || ''}
         onChange={handleChange}
+        disabled={disabled}
       >
-        <option value="">Select feature</option>
+        <option value="">Selecciona caracteristica</option>
         {featureOptions.map((feature) => (
           <option key={feature} value={feature}>
             {feature}
@@ -187,11 +191,30 @@ const GaugesGame = () => {
   const navigate = useNavigate();
 
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [completedSections, setCompletedSections] = useState({});
+  const [allCompleted, setAllCompleted] = useState(false);
   const { availableValuesBySection, tableValuesBySection } = state;
-  
+
   // Modal state and clock input state
   const [modalOpen, setModalOpen] = useState(false);
   const [clockInput, setClockInput] = useState('');
+
+  // Time management states
+  const timeLimit = location.state?.timeLimit || 120; // default 120 seconds
+  const [timeLeft, setTimeLeft] = useState(timeLimit);
+  const [timeUp, setTimeUp] = useState(false);
+
+  // Start modal state (added for music start)
+  const [startModalOpen, setStartModalOpen] = useState(true);
+
+  const isMounted = useRef(true);
+  const gameStartTime = useRef(null);
+
+  // Section completion times
+  const [sectionCompletionTimes, setSectionCompletionTimes] = useState({});
+
+  // Audio ref for background music
+  const audioRef = useRef(null);
 
   // normalize feature (handles null, arrays, comma-separated strings, casing)
   const normalizeFeature = (f) => {
@@ -346,14 +369,16 @@ const GaugesGame = () => {
   }, []);
 
   // Group gauges by section for rendering
-  const groupedGaugesBySection = gauges.reduce((acc, entry) => {
-    const sectionId = entry.sectionId || 'no-section';
-    if (!acc[sectionId]) acc[sectionId] = [];
-    acc[sectionId].push(entry);
-    return acc;
-  }, {});
+  const groupedGaugesBySection = useMemo(() => {
+    return gauges.reduce((acc, entry) => {
+      const sectionId = entry.sectionId || 'no-section';
+      if (!acc[sectionId]) acc[sectionId] = [];
+      acc[sectionId].push(entry);
+      return acc;
+    }, {});
+  }, [gauges]);
 
-  // replace existing isSectionComplete body with this:
+  // Check if section is complete (all rows correct)
   const isSectionComplete = (sectionId) => {
     const originalItems = groupedGaugesBySection[sectionId] || [];
     const tableValues = tableValuesBySection[sectionId] || [];
@@ -367,14 +392,13 @@ const GaugesGame = () => {
     return true;
   };
 
-  const [completedSections, setCompletedSections] = useState({});
-  const [allCompleted, setAllCompleted] = useState(false);
-
+  // Section completion tracking with times
   useEffect(() => {
     if (sections.length === 0) return;
 
     const newCompletedSections = {};
     let allDone = true;
+    const newSectionCompletionTimes = { ...sectionCompletionTimes };
 
     sections.forEach(({ id: sectionId }) => {
       const originalItems = groupedGaugesBySection[sectionId] || [];
@@ -385,32 +409,125 @@ const GaugesGame = () => {
 
       const complete = isSectionComplete(sectionId);
       newCompletedSections[sectionId] = complete;
-      if (!complete) allDone = false;
+
+      if (complete) {
+        if (!newSectionCompletionTimes[sectionId]) {
+          const now = Date.now();
+          const timeTakenSeconds = Math.floor((now - gameStartTime.current) / 1000);
+          newSectionCompletionTimes[sectionId] = {
+            completedAt: now,
+            timeTaken: timeTakenSeconds,
+          };
+        }
+      } else {
+        allDone = false;
+      }
     });
 
     setCompletedSections(newCompletedSections);
     setAllCompleted(allDone);
-  }, [tableValuesBySection, sections, gauges, insulatorMap]);
+    setSectionCompletionTimes(newSectionCompletionTimes);
+  }, [tableValuesBySection, sections, groupedGaugesBySection]);
 
-  // Handler to open modal
+  // Time countdown effect
+  useEffect(() => {
+    if (startModalOpen) return; // don't start countdown until game started
+
+    isMounted.current = true;
+    if (timeLeft <= 0) {
+      setTimeUp(true);
+      return;
+    }
+
+    if (!timeUp) {
+      const timerId = setTimeout(() => {
+        if (isMounted.current) setTimeLeft(timeLeft - 1);
+      }, 1000);
+
+      return () => clearTimeout(timerId);
+    }
+    return undefined;
+  }, [timeLeft, timeUp, startModalOpen]);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // Modal open/close handlers
   const openModal = () => {
     setModalOpen(true);
   };
-
-  // Handler to close modal
   const closeModal = () => {
     setModalOpen(false);
   };
 
-  // Handler to submit player data
+  // Start game handler
+  const startGame = () => {
+    setStartModalOpen(false);
+    gameStartTime.current = Date.now();
+    setTimeLeft(timeLimit);
+    setTimeUp(false);
+
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((e) => {
+        console.warn('Could not autoplay music:', e);
+      });
+    }
+  };
+
+  // Set audio volume on mount
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = 0.3;
+    }
+  }, []);
+
+  // Count correct in section (returns both correctCount and totalCount)
+  const countCorrectInSection = (sectionId) => {
+    const originalItems = groupedGaugesBySection[sectionId] || [];
+    const tableValues = tableValuesBySection[sectionId] || [];
+
+    let correctCount = 0;
+
+    for (let i = 0; i < tableValues.length; i++) {
+      const row = tableValues[i];
+      if (!row) continue;
+      if (isRowCorrect(row, originalItems, insulatorMap)) correctCount++;
+    }
+
+    return { correctCount, totalCount: originalItems.length };
+  };
+
+  // Submit player data handler
   const handleSubmitPlayer = async () => {
     const plant = sessionStorage.getItem('plantName') || 'Unknown';
     const game = sessionStorage.getItem('gameName') || 'Unknown';
 
-    // Prepare completedSections array with section ids that are completed
-    const completedSectionIds = Object.entries(completedSections)
-      .filter(([_, completed]) => completed)
-      .map(([sectionId]) => ({ sectionId: Number(sectionId) }));
+    const now = Date.now();
+    const elapsedTime = Math.floor((now - gameStartTime.current) / 1000);
+
+    // Enviar solo las secciones que tienen datos y se muestran en el juego
+    const displayedSections = sections.filter(({ id }) => (groupedGaugesBySection[id] || []).length > 0);
+
+    const completedSectionData = displayedSections.map(({ id: sectionId, name }) => {
+      const { correctCount, totalCount } = countCorrectInSection(sectionId);
+
+      // Para tiempo tomado, si completó, usar tiempo guardado, si no, usar elapsedTime o tiempo restante
+      let timeTakenSeconds = sectionCompletionTimes[sectionId]?.timeTaken;
+      if (timeTakenSeconds === undefined) {
+        timeTakenSeconds = timeUp ? timeLimit - timeLeft : elapsedTime;
+      }
+
+      return {
+        sectionId,
+        name,
+        correctCount: `${correctCount} / ${totalCount}`,
+        timeTaken: formatTime(timeTakenSeconds),
+      };
+    });
 
     if (!clockInput.trim()) {
       toast.error('Please enter the clock value.');
@@ -422,47 +539,131 @@ const GaugesGame = () => {
         clock: clockInput.trim(),
         plant,
         game,
-        completedSections: completedSectionIds,
+        completedSections: completedSectionData,
       });
       toast.success('Player saved successfully!');
       closeModal();
-      navigate('/gamesmenu'); // Navigate back to games menu after saving
+      navigate('/gamesmenu');
     } catch (error) {
       console.error(error);
       toast.error('Error saving player.');
     }
   };
 
-  // Obtain array of completed sections with name and id
-  const completedSectionsList = sections.filter(section => completedSections[section.id]);
+  // Mostrar todas las secciones en el modal, con correctCount aunque sea 0
+  const completedSectionsList = sections
+    .filter((section) => (groupedGaugesBySection[section.id] || []).length > 0) // solo secciones con datos
+    .map((section) => {
+      const sectionId = section.id;
 
-  // Determine if there are any completed sections
-  const hasCompletedSections = completedSectionsList.length > 0;
+      // Prefer saved completion time; otherwise use a stable fallback.
+      let timeTaken = sectionCompletionTimes[sectionId]?.timeTaken;
+      if (timeTaken === undefined) {
+        timeTaken = timeUp ? timeLimit - timeLeft : Math.floor((Date.now() - gameStartTime.current) / 1000);
+      }
+
+      const { correctCount, totalCount } = countCorrectInSection(sectionId);
+      return {
+        ...section,
+        timeTaken,
+        correctCount,
+        totalCount,
+      };
+    });
+
+  // Mantener la lógica del botón para guardar
+  const canSave = timeUp || allCompleted;
+
+  // Calcular total items y total correctos
+  const totalItems = sections.reduce((acc, section) => {
+    return acc + (groupedGaugesBySection[section.id]?.length || 0);
+  }, 0);
+
+  let totalCorrect = 0;
+  sections.forEach(({ id: sectionId }) => {
+    const originalItems = groupedGaugesBySection[sectionId] || [];
+    const tableValues = tableValuesBySection[sectionId] || [];
+
+    for (let i = 0; i < tableValues.length; i++) {
+      const row = tableValues[i];
+      if (!row) continue;
+      if (isRowCorrect(row, originalItems, insulatorMap)) totalCorrect++;
+    }
+  });
 
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="p-5">
-        <h2 className="text-2xl font-semibold mb-6 mr-4 inline">Arrange the gauges and rings, and select features</h2>
+        {/* Start modal */}
+        {startModalOpen && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50 p-4">
+            <div className="bg-white rounded p-6 max-w-lg w-full text-center">
+              <h2 className="text-2xl font-semibold mb-4">Como jugar</h2>
+              <p className="mb-6 text-left">
+                En este juego, debes ordenar los calibres y anillos arrastrándolos y soltándolos en las celdas correctas de la tabla, y seleccionar las caracteristicas adecuadas del menú desplegable. Tienes un límite de tiempo para completar todas las secciones. ¡Buena suerte!
+              </p>
+              <button
+                onClick={startGame}
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Comenzar
+              </button>
+            </div>
+          </div>
+        )}
 
-        {/* Button to open modal */}
+        {/* Background music */}
+        <audio
+          ref={audioRef}
+          src="/music/Puzzle-Clues.ogg"
+          loop
+          preload="auto"
+        />
+
+        <h2 className="text-2xl font-semibold mb-6 mr-4 inline">
+          Ordena los calibres y anillos, y selecciona las caracteristicas
+        </h2>
+
+        <div className="mb-4 text-lg font-semibold">
+          Tiempo restante:{' '}
+          {Math.floor(timeLeft / 60)
+            .toString()
+            .padStart(2, '0')}
+          :{(timeLeft % 60).toString().padStart(2, '0')}
+        </div>
+
+        {timeUp && (
+          <div className="mb-6 p-4 bg-red-200 text-red-800 rounded font-semibold">
+            Se acabo el tiempo! Ya no puedes hacer cambios. Aqui estan tus resultados:
+            <ul className="list-disc list-inside mt-2">
+              <li>
+                Respuestas correctas: <strong>{totalCorrect}</strong> / {totalItems}
+              </li>
+            </ul>
+          </div>
+        )}
+
         <button
           onClick={openModal}
-          className={!hasCompletedSections ? "mb-6 px-4 py-2 bg-gray-300 text-white rounded" : "mb-6 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"}
-          disabled={!hasCompletedSections} // Inable only if at least one section is completed
-          title={!hasCompletedSections ? 'Complete at least one section to save' : ''}
+          className={
+            !canSave
+              ? 'mb-6 px-4 py-2 bg-gray-300 text-white rounded cursor-not-allowed'
+              : 'mb-6 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700'
+          }
+          disabled={!canSave}
+          title={!canSave ? 'Completa todas las secciones o espera a que termine el tiempo para guardar' : ''}
         >
           <i className="mr-1 fa-solid fa-floppy-disk"></i>
-          Save Player
+          Guardar jugador
         </button>
 
-        {/* Modal */}
         {modalOpen && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
             <div className="bg-white rounded p-6 w-80 max-w-full">
-              <h3 className="text-lg font-semibold mb-4">Save Player</h3>
+              <h3 className="text-lg font-semibold mb-4">Guardar jugador</h3>
               <div className="mb-4">
                 <label htmlFor="clock" className="block mb-1 font-medium">
-                  Clock
+                  Reloj
                 </label>
                 <input
                   id="clock"
@@ -470,27 +671,29 @@ const GaugesGame = () => {
                   value={clockInput}
                   onChange={(e) => setClockInput(e.target.value)}
                   className="w-full border border-gray-300 rounded px-3 py-2"
-                  placeholder="Enter clock value"
+                  placeholder="Ingrese reloj"
+                  // disabled={timeUp}
                 />
               </div>
               <div className="mb-4">
                 <p>
-                  <strong>Plant:</strong> {sessionStorage.getItem('plantName') || 'Unknown'}
+                  <strong>Planta:</strong> {sessionStorage.getItem('plantName') || 'Desconocida'}
                 </p>
                 <p>
-                  <strong>Game:</strong> {sessionStorage.getItem('gameName') || 'Unknown'}
+                  <strong>Juego:</strong> {sessionStorage.getItem('gameName') || 'Desconocido'}
                 </p>
               </div>
 
-              {/* Mostrar secciones completadas */}
               <div className="mb-4">
-                <strong>Completed Sections:</strong>
+                <strong>Secciones completadas:</strong>
                 {completedSectionsList.length === 0 ? (
-                  <p className="italic text-gray-500">No sections completed yet.</p>
+                  <p className="italic text-gray-500">Sin secciones completadas aun.</p>
                 ) : (
-                  <ul className="list-disc list-inside max-h-32 overflow-auto mt-1">
+                  <ul className="list-disc list-inside max-h-48 overflow-auto mt-1">
                     {completedSectionsList.map((section) => (
-                      <li key={section.id}>{section.name}</li>
+                      <li key={section.id}>
+                        {section.name} - Correctos: {section.correctCount} / {section.totalCount} - Tiempo: {formatTime(section.timeTaken)}
+                      </li>
                     ))}
                   </ul>
                 )}
@@ -501,251 +704,227 @@ const GaugesGame = () => {
                   onClick={closeModal}
                   className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button
                   onClick={handleSubmitPlayer}
                   className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  disabled={!hasCompletedSections} // También deshabilitar aquí para seguridad
-                  title={!hasCompletedSections ? 'Complete at least one section to save' : ''}
+                  disabled={!canSave}
+                  title={!canSave ? 'Completa todas las secciones o espera a que termine el tiempo para guardar' : ''}
                 >
-                  Save
+                  Guardar
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {allCompleted && (
+        {allCompleted && !timeUp && (
           <div className="mb-6 p-4 bg-green-200 text-green-800 rounded font-semibold">
-            You have successfully completed all sections! 🎉
+            Has completado exitosamente todas las secciones! 🎉
           </div>
         )}
 
         {sections
-         .filter(({ id }) => (groupedGaugesBySection[id] || []).length > 0)
-         .map(({ id: sectionId, name }) => {
-          const originalItems = groupedGaugesBySection[sectionId] || [];
-          const availableValues = availableValuesBySection[sectionId] || { gauge: [], rings: [] };
-          const tableValues = tableValuesBySection[sectionId] || [];
+          .filter(({ id }) => (groupedGaugesBySection[id] || []).length > 0)
+          .map(({ id: sectionId, name }) => {
+            const originalItems = groupedGaugesBySection[sectionId] || [];
+            const availableValues = availableValuesBySection[sectionId] || { gauge: [], rings: [] };
+            const tableValues = tableValuesBySection[sectionId] || [];
 
-          if (originalItems.length === 0) {
+            if (originalItems.length === 0) {
+              return (
+                <div key={sectionId} className="mb-10">
+                  <h3 className="text-xl font-semibold mb-2">{name}</h3>
+                  <p className="italic text-gray-600">No hay datos para esta seccion.</p>
+                </div>
+              );
+            }
+
+            // Split into two halves for two tables
+            const midIndex = Math.ceil(originalItems.length / 2);
+            const firstHalf = originalItems.slice(0, midIndex);
+            const secondHalf = originalItems.slice(midIndex);
+
             return (
-              <div key={sectionId} className="mb-10">
-                <h3 className="text-xl font-semibold mb-2">{name}</h3>
-                <p className="italic text-gray-600">There is no data for this section.</p>
-              </div>
-            );
-          }
-
-          // Split into two halves for two tables
-          const midIndex = Math.ceil(originalItems.length / 2);
-          const firstHalf = originalItems.slice(0, midIndex);
-          const secondHalf = originalItems.slice(midIndex);
-
-          return (
-            <div
-              key={sectionId}
-              className="mb-10 flex flex-col md:flex-row md:items-start md:gap-6"
-            >
-              <div className="mb-4 md:mb-0 md:w-48">
-                <p className="text-lg font-semibold">{name}</p>
-                {completedSections[sectionId] && (
-                  <span className="text-green-600 font-bold">✔ Completed</span>
-                )}
-
-                {/* Available values for gauge and rings */}
-                <div className="mt-3 border border-gray-300 rounded bg-gray-50 p-3 max-h-64 overflow-auto">
-                  <strong className="block mb-2">Available Gauges:</strong>
-                  {availableValues.gauge.length === 0 ? (
-                    <p className="italic text-gray-500">No available gauges</p>
-                  ) : (
-                    availableValues.gauge.map((val) => (
-                      <DraggableValue
-                        key={val.id + '-gauge'}
-                        val={val}
-                        sectionId={sectionId}
-                        field="gauge"
-                        insulatorType={val.insulatorType}
-                      />
-                    ))
+              <div
+                key={sectionId}
+                className="mb-10 flex flex-col md:flex-row md:items-start md:gap-6"
+              >
+                <div className="mb-4 md:mb-0 md:w-48">
+                  <p className="text-lg font-semibold">{name}</p>
+                  {completedSections[sectionId] && (
+                    <span className="text-green-600 font-bold">✔ Completado</span>
                   )}
+
+                  {/* Available values for gauge and rings */}
+                  <div className="mt-3 border border-gray-300 rounded bg-gray-50 p-3 max-h-64 overflow-auto">
+                    <strong className="block mb-2">Calibres disponibles:</strong>
+                    {availableValues.gauge.length === 0 ? (
+                      <p className="italic text-gray-500">Sin calibres disponibles</p>
+                    ) : (
+                      availableValues.gauge.map((val) => (
+                        <DraggableValue
+                          key={val.id + '-gauge'}
+                          val={val}
+                          sectionId={sectionId}
+                          field="gauge"
+                          insulatorType={val.insulatorType}
+                          disabled={timeUp}
+                        />
+                      ))
+                    )}
+                  </div>
+                  <div className="mt-3 border border-gray-300 rounded bg-gray-50 p-3 max-h-64 overflow-auto">
+                    <strong className="block mb-2">Anillos disponibles:</strong>
+                    {availableValues.rings.length === 0 ? (
+                      <p className="italic text-gray-500">Sin anillos disponibles</p>
+                    ) : (
+                      availableValues.rings.map((val) => (
+                        <DraggableValue
+                          key={val.id + '-rings'}
+                          val={val}
+                          sectionId={sectionId}
+                          field="rings"
+                          insulatorType={val.insulatorType}
+                          disabled={timeUp}
+                        />
+                      ))
+                    )}
+                  </div>
                 </div>
-                <div className="mt-3 border border-gray-300 rounded bg-gray-50 p-3 max-h-64 overflow-auto">
-                  <strong className="block mb-2">Available Rings:</strong>
-                  {availableValues.rings.length === 0 ? (
-                    <p className="italic text-gray-500">No available rings</p>
-                  ) : (
-                    availableValues.rings.map((val) => (
-                      <DraggableValue
-                        key={val.id + '-rings'}
-                        val={val}
-                        sectionId={sectionId}
-                        field="rings"
-                        insulatorType={val.insulatorType}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
 
-              <div className="flex-1 flex flex-col md:flex-row md:gap-6 overflow-x-auto">
-                {/* First table */}
-                <table className="w-full md:w-1/2 border border-gray-300 rounded text-center table-fixed mb-6 md:mb-0">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '10%' }}>Insulator</th>
-                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Gauge</th>
-                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Rings</th>
-                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Features</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {firstHalf.map((item, index) => {
-                      const row = tableValues[index] || {
-                        gauge: null,
-                        rings: null,
-                        features: '',
-                        insulatorType: insulatorMap[item.insulatorId] || 'Unknown',
-                      };
-
-                      // Correctness: gauge and rings values exist for insulator type anywhere in original data
-                      // const isGaugeCorrect = row.gauge
-                      //   ? originalItems.some(
-                      //       (orig) =>
-                      //         insulatorMap[orig.insulatorId] === row.insulatorType &&
-                      //         orig.gauge === row.gauge.value
-                      //     )
-                      //   : false;
-
-                      // const isRingsCorrect = row.rings
-                      //   ? originalItems.some(
-                      //       (orig) =>
-                      //         insulatorMap[orig.insulatorId] === row.insulatorType &&
-                      //         orig.rings === row.rings.value
-                      //     )
-                      //   : false;
-
-                      const rowIsCorrect = isRowCorrect(row, originalItems, insulatorMap);
-
-                      return (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="align-middle py-2">{row.insulatorType}</td>
-                          <DraggableValueCell
-                            val={row.gauge}
-                            index={index}
-                            sectionId={sectionId}
-                            field="gauge"
-                            moveValueInTable={moveValueInTable}
-                            assignValueToCell={assignValueToCell}
-                            isCorrect={rowIsCorrect}
-                          />
-                          <DraggableValueCell
-                            val={row.rings}
-                            index={index}
-                            sectionId={sectionId}
-                            field="rings"
-                            moveValueInTable={moveValueInTable}
-                            assignValueToCell={assignValueToCell}
-                            isCorrect={rowIsCorrect}
-                          />
-                          <FeaturesSelectCell
-                            val={row.features}
-                            index={index}
-                            sectionId={sectionId}
-                            featureOptions={uniqueFeatures}
-                            updateFeature={updateFeature}
-                          />
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                {/* Second table */}
-                <table className="w-full md:w-1/2 border border-gray-300 rounded text-center table-fixed">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '10%' }}>Insulator</th>
-                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Gauge</th>
-                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Rings</th>
-                      <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Features</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {secondHalf.map((item, index) => {
-                      const row = tableValues[midIndex + index] || {
-                        gauge: null,
-                        rings: null,
-                        features: '',
-                        insulatorType: insulatorMap[item.insulatorId] || 'Unknown',
-                      };
-
-                      // const isGaugeCorrect = row.gauge
-                      //   ? originalItems.some(
-                      //       (orig) =>
-                      //         insulatorMap[orig.insulatorId] === row.insulatorType &&
-                      //         orig.gauge === row.gauge.value
-                      //     )
-                      //   : false;
-
-                      // const isRingsCorrect = row.rings
-                      //   ? originalItems.some(
-                      //       (orig) =>
-                      //         insulatorMap[orig.insulatorId] === row.insulatorType &&
-                      //         orig.rings === row.rings.value
-                      //     )
-                      //   : false;
+                <div className="flex-1 flex flex-col md:flex-row md:gap-6 overflow-x-auto">
+                  {/* First table */}
+                  <table className="w-full md:w-1/2 border border-gray-300 rounded text-center table-fixed mb-6 md:mb-0">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '10%' }}>Aislante</th>
+                        <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Calibre</th>
+                        <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Anillos</th>
+                        <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Caracteristicas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {firstHalf.map((item, index) => {
+                        const row = tableValues[index] || {
+                          gauge: null,
+                          rings: null,
+                          features: '',
+                          insulatorType: insulatorMap[item.insulatorId] || 'Desconocido',
+                        };
 
                         const rowIsCorrect = isRowCorrect(row, originalItems, insulatorMap);
 
-                      return (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="align-middle py-2">{row.insulatorType}</td>
-                          <DraggableValueCell
-                            val={row.gauge}
-                            index={midIndex + index}
-                            sectionId={sectionId}
-                            field="gauge"
-                            moveValueInTable={moveValueInTable}
-                            assignValueToCell={assignValueToCell}
-                            isCorrect={rowIsCorrect}
-                          />
-                          <DraggableValueCell
-                            val={row.rings}
-                            index={midIndex + index}
-                            sectionId={sectionId}
-                            field="rings"
-                            moveValueInTable={moveValueInTable}
-                            assignValueToCell={assignValueToCell}
-                            isCorrect={rowIsCorrect}
-                          />
-                          <FeaturesSelectCell
-                            val={row.features}
-                            index={midIndex + index}
-                            sectionId={sectionId}
-                            featureOptions={uniqueFeatures}
-                            updateFeature={updateFeature}
-                          />
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                        return (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="align-middle py-2">{row.insulatorType}</td>
+                            <DraggableValueCell
+                              val={row.gauge}
+                              index={index}
+                              sectionId={sectionId}
+                              field="gauge"
+                              moveValueInTable={moveValueInTable}
+                              assignValueToCell={assignValueToCell}
+                              isCorrect={rowIsCorrect}
+                              disabled={timeUp}
+                            />
+                            <DraggableValueCell
+                              val={row.rings}
+                              index={index}
+                              sectionId={sectionId}
+                              field="rings"
+                              moveValueInTable={moveValueInTable}
+                              assignValueToCell={assignValueToCell}
+                              isCorrect={rowIsCorrect}
+                              disabled={timeUp}
+                            />
+                            <FeaturesSelectCell
+                              val={row.features}
+                              index={index}
+                              sectionId={sectionId}
+                              featureOptions={uniqueFeatures}
+                              updateFeature={updateFeature}
+                              disabled={timeUp}
+                            />
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+
+                  {/* Second table */}
+                  <table className="w-full md:w-1/2 border border-gray-300 rounded text-center table-fixed">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '10%' }}>Aislante</th>
+                        <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Calibre</th>
+                        <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Anillos</th>
+                        <th className="border-b border-gray-300 py-2 text-xs" style={{ width: '30%' }}>Caracteristicas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {secondHalf.map((item, index) => {
+                        const row = tableValues[midIndex + index] || {
+                          gauge: null,
+                          rings: null,
+                          features: '',
+                          insulatorType: insulatorMap[item.insulatorId] || 'Unknown',
+                        };
+
+                        const rowIsCorrect = isRowCorrect(row, originalItems, insulatorMap);
+
+                        return (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="align-middle py-2">{row.insulatorType}</td>
+                            <DraggableValueCell
+                              val={row.gauge}
+                              index={midIndex + index}
+                              sectionId={sectionId}
+                              field="gauge"
+                              moveValueInTable={moveValueInTable}
+                              assignValueToCell={assignValueToCell}
+                              isCorrect={rowIsCorrect}
+                              disabled={timeUp}
+                            />
+                            <DraggableValueCell
+                              val={row.rings}
+                              index={midIndex + index}
+                              sectionId={sectionId}
+                              field="rings"
+                              moveValueInTable={moveValueInTable}
+                              assignValueToCell={assignValueToCell}
+                              isCorrect={rowIsCorrect}
+                              disabled={timeUp}
+                            />
+                            <FeaturesSelectCell
+                              val={row.features}
+                              index={midIndex + index}
+                              sectionId={sectionId}
+                              featureOptions={uniqueFeatures}
+                              updateFeature={updateFeature}
+                              disabled={timeUp}
+                            />
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </DndProvider>
   );
 };
 
 // DraggableValue component updated to accept insulatorType prop for display (optional)
-const DraggableValue = ({ val, sectionId, field, insulatorType }) => {
+const DraggableValue = ({ val, sectionId, field, insulatorType, disabled }) => {
   const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.VALUE,
     item: { id: val.id, sectionId, from: 'list', field, insulatorType },
+    canDrag: !disabled,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -756,12 +935,19 @@ const DraggableValue = ({ val, sectionId, field, insulatorType }) => {
       ref={drag}
       className={`px-3 py-2 my-1 rounded cursor-grab select-none bg-gray-200 ${
         isDragging ? 'opacity-50' : 'opacity-100'
-      }`}
-      title={insulatorType}
+      } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
     >
       {val.value}
     </div>
   );
 };
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const s = (seconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
 
 export default GaugesGame;

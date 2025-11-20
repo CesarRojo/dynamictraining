@@ -17,7 +17,7 @@ export default function Login() {
     try {
       await login(email, password);
       toast.success("Login successful");
-      navigate('/plants');
+      navigate('/colors');
     } catch (err) {
       toast.error("Login failed");
       console.error("Login error:", err);
